@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, FlatList, Button, StyleSheet } from 'react-native';
 import uu from 'react-native-uuid';
 import Stor from '@react-native-async-storage/async-storage'
-import io from 'socket.io-client';
-export default function ChatApp() {
+import * as scren from 'expo-screen-capture';
+export default function ChatApp({navigation,route}) {
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState('');
-    const [soc,set] = useState(null);
     const [id,is] = useState('');
+    const {msge,send} = route.params;
     async function getid (){
         let ide = await Stor.getItem('_id');
         if (!ide) {
@@ -17,15 +17,23 @@ export default function ChatApp() {
         return ide;
     }
     useEffect(()=>{
+        const data = navigation.getParam('sendData');
+        if (data){
+        setMessages(data()[route.params.id])
+        }
+    },[navigation])
+    useEffect(()=>{
+        console.log('---')
+        setMessages(msge[route.params.id])},[msge])
+    useEffect(()=>{
         (async ()=>{
+            await scren.preventScreenCaptureAsync();
             is(await getid());
         })();
-        const sock = io(`http://192.168.246.146:3000`);
-        set(sock);
-        sock.emit('set','room');
-        sock.on('cht',(msg)=>{
-            setMessages(p=>[msg,...p]);
-        })
+        setMessages(msge[route.params.id] ?? []);
+        return ()=>{
+            scren.allowScreenCaptureAsync();
+        }
     },[])
     const addMessage = () => {
         if (inputText.trim()) {
@@ -35,7 +43,7 @@ export default function ChatApp() {
                 id,
             };
             setInputText('');
-            soc.emit('chat','room',newMessage);
+            send(route.params.id,newMessage);
         }
     };
 

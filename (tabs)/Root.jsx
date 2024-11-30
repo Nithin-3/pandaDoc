@@ -36,7 +36,7 @@ export default function App({navigation}) {
                         onLongPress={()=>{setchat(l=>!l)}}
                         style={{ margin: 5, borderColor: "#000", borderWidth: 1, borderRadius: 15, padding: 5 }}
                         onPress={() => {
-                            chat? navigation.navigate("Test") :
+                            chat? navigation.navigate("List") :
                             navigation.navigate('pdf',item.uri); // Pass the uri correctly
                         }}>
                         <Text>{item.name}</Text>
