@@ -1,10 +1,29 @@
 import { ScrollView, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,View} from 'react-native'
+import { useEffect,useState} from "react";
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import socket from '@/constants/Socket';
+import {useRoute} from "@react-navigation/native"
+import AsyncStorage from "@react-native-async-storage/async-storage";
 export default function Chat() {
+    const {uid} = useRoute().params;
     const borderColor = useThemeColor({light:undefined,dark:undefined},'text');
+    const [txt,stxt] = useState('');
+    const [yar,syar] = useState('');
+    AsyncStorage.getItem("uid").then(syar);
+    const sendMsg = ()=>{
+        if(!txt.trim())return;
+        socket.emit('chat',uid,{msg:txt.trim(),yar});
+        stxt('');
+    }
+   useEffect(()=>{
+        socket.on('msg',console.log);
+        return ()=>{
+        socket.off('msg');
+        }
+    },[]) 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <ThemedView style={style.chat}>
@@ -13,14 +32,15 @@ export default function Chat() {
                         <ThemedText>fghsrhsrvxvdvd</ThemedText>
                     </View>
                     <View style={[style.msg,{alignSelf:'flex-end'},{borderColor}]}>
-                        <ThemedText>fghsrhsr</ThemedText>
+                        <ThemedText>{uid}</ThemedText>
                     </View>
                 </ScrollView>
                 <ThemedView style={style.eventArea}>
                     <ThemedView style={[style.textArea,{borderColor}]} >
-                        <ThemedInput style={style.inputfield} placeholder='Tyye...'  />
-                        <TouchableOpacity style={style.sendbtn}  >
-                            <ThemedText>loadc</ThemedText>
+                        <ThemedInput style={style.inputfield} placeholder='Tyye...' value={txt} onChangeText={stxt} />
+                        <TouchableOpacity style={style.sendbtn} onPress={sendMsg} >
+
+                            <ThemedText>🏹</ThemedText>
                         </TouchableOpacity>
                     </ThemedView>
                 </ThemedView>

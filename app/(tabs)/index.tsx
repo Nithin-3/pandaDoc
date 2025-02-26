@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { StyleSheet, ScrollView,PermissionsAndroid } from 'react-native';
+import { StyleSheet, ScrollView,PermissionsAndroid,  TouchableOpacity} from 'react-native';
+import { ThemedText } from '@/components/ThemedText';
 import {useNavigation} from 'expo-router'
 export default function HomeScreen() {
     const nav = useNavigation()
     useEffect(()=>{
-        nav.navigate("chat");
         
     },[])
     const getfile = async ()=>{
@@ -16,6 +16,9 @@ export default function HomeScreen() {
     getfile()
     return (
         <ScrollView>
+            <TouchableOpacity onPress={()=>{nav.navigate('list')}}><ThemedText>
+            chat</ThemedText> 
+            </TouchableOpacity>
         </ScrollView>
     );
 }
