@@ -8,6 +8,8 @@ import { ThemedInput } from "@/components/ThemedInput";
 import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
+import * as FileSystem from 'expo-file-system';
+import socket from '@/constants/Socket';
 const CONTACTS_KEY = "chat_contacts";
 
 const ChatContactsScreen = () => {
@@ -19,7 +21,33 @@ const ChatContactsScreen = () => {
 
     const nav = useNavigation()
     useEffect(() => {
+
+        socket.on('msg', async (msg) => {
+            try {
+                const path = `${FileSystem.documentDirectory}${msg.yar}.nin`;
+                const fileInfo = await FileSystem.getInfoAsync(path);
+
+                if (!fileInfo.exists) {
+                    setNewContactUUID(msg.yar);
+                    setNewContactName('unknown');
+                    addContact();
+                    await FileSystem.writeAsStringAsync(path, JSON.stringify([msg]), { encoding: FileSystem.EncodingType.UTF8 });
+                    return;
+                }
+
+                const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
+                const parsedData = JSON.parse(oldData);
+
+                await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, msg]), { encoding: FileSystem.EncodingType.UTF8 });
+            } catch (error) {
+                console.error('Error handling file:', error);
+            }
+        });
+
         loadContacts();
+        return ()=>{
+            socket.off("msg")
+        }
     }, []);
 
     const loadContacts = async () => {
