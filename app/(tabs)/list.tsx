@@ -14,42 +14,36 @@ const CONTACTS_KEY = "chat_contacts";
 
 const ChatContactsScreen = () => {
     const [contacts, setContacts] = useState([]);
-    const [newContactName, setNewContactName] = useState("");
-    const [newContactUUID, setNewContactUUID] = useState("");
+    const [name, sname] = useState("");
+    const [uid, suid] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
     const [yar,syar] = useState("");
-
     const nav = useNavigation()
     useEffect(() => {
-
         socket.on('msg', async (msg) => {
             try {
                 const path = `${FileSystem.documentDirectory}${msg.yar}.nin`;
                 const fileInfo = await FileSystem.getInfoAsync(path);
-
                 if (!fileInfo.exists) {
-                    setNewContactUUID(msg.yar);
-                    setNewContactName('unknown');
+                    suid(msg.yar);
+                    sname('unknown');
                     addContact();
                     await FileSystem.writeAsStringAsync(path, JSON.stringify([msg]), { encoding: FileSystem.EncodingType.UTF8 });
                     return;
                 }
-
                 const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
                 const parsedData = JSON.parse(oldData);
-
                 await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, msg]), { encoding: FileSystem.EncodingType.UTF8 });
+                // show new msg count push 1st in queue 
             } catch (error) {
                 console.error('Error handling file:', error);
             }
         });
-
         loadContacts();
         return ()=>{
             socket.off("msg")
         }
     }, []);
-
     const loadContacts = async () => {
         try {
             const storedContacts = await AsyncStorage.getItem(CONTACTS_KEY);
@@ -61,30 +55,26 @@ const ChatContactsScreen = () => {
             console.error("Error loading contacts:", error);
         }
     };
-
     const addContact = async () => {
-        if (!newContactName.trim()) return;
-
+        if (!name.trim()) return;
+    // check uuid alredy exist
         const newContact = {
-            id: newContactUUID || uuid.v4(),
-            name: newContactName.trim(),
+            id: uid ,
+            name: name.trim(),
         };
-
         const updatedContacts = [...contacts, newContact];
         setContacts(updatedContacts);
         await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(updatedContacts));
 
-        setNewContactName("");
-        setNewContactUUID("");
+        sname("");
+        suid("");
         setModalVisible(false);
     };
-
     const deleteContact = async (contactId) => {
         const updatedContacts = contacts.filter((contact) => contact.id !== contactId);
         setContacts(updatedContacts);
         await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(updatedContacts));
     };
-
     const showDeleteAlert = (contactId) => {
         Alert.alert(
             "Delete Contact",
@@ -95,7 +85,6 @@ const ChatContactsScreen = () => {
             ]
         );
     };
-
     const renderSwipeableContact = ({ item }) => (
         <Swipeable
             renderRightActions={() => (
@@ -134,14 +123,14 @@ const ChatContactsScreen = () => {
 
                             <ThemedInput
                                 placeholder="Enter contact name"
-                                value={newContactName}
-                                onChangeText={setNewContactName}
+                                value={name}
+                                onChangeText={sname}
                             />
 
                             <ThemedInput
                                 placeholder="Enter UUID"
-                                value={newContactUUID}
-                                onChangeText={setNewContactUUID}
+                                value={uid}
+                                onChangeText={suid}
                             />
 
                             <ThemedView style={styles.modalButtons}>
