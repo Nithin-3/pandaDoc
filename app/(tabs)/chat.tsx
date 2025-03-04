@@ -19,7 +19,9 @@ export default function Chat() {
     const sendMsg = ()=>{
         if(!txt.trim())return;
         socket.emit('chat',uid,{msg:txt.trim(),yar});
+        smgs(p=>[...p,{msg:txt.trim(),yar}]);
         stxt('');
+        
 
     }
     useEffect(()=>{
