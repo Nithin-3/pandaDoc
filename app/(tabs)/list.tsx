@@ -121,6 +121,7 @@ const ChatContactsScreen = () => {
             <TouchableOpacity onPress={()=>{nav.navigate('chat',{uid:item.id})}} onLongPress={() => showDeleteAlert(item.id)} style={styles.contactItem}>
                 <ThemedText style={styles.contactName}>{item.name}</ThemedText>
                 <ThemedText style={styles.contactUuid}>{item.id}</ThemedText>
+                <ThemedText>{item.new}</ThemedText>
             </TouchableOpacity>
         </Swipeable>
     );

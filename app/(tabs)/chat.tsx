@@ -19,6 +19,7 @@ export default function Chat() {
     const sendMsg = ()=>{
         if(!txt.trim())return;
         socket.emit('chat',uid,{msg:txt.trim(),yar});
+        uid!=yar && smgs(p=>[...p,{msg:txt.trim(),yar}]);
         stxt('');
 
     }
@@ -35,6 +36,7 @@ export default function Chat() {
                 const fileInfo = await FileSystem.getInfoAsync(path);
                 if (!fileInfo.exists) {
                     await FileSystem.writeAsStringAsync(path, JSON.stringify([msg]), { encoding: FileSystem.EncodingType.UTF8 });
+                    // list contact push 1st new message
                     return;
                 }
 
