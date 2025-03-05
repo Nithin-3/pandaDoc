@@ -20,8 +20,13 @@ const ChatContactsScreen = () => {
     const [yar,syar] = useState("");
     const nav = useNavigation()
     useEffect(() => {
+        (async()=>{
       contacts.length &&
         await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+        sname("");
+        suid("");
+        setModalVisible(false);
+        })();
     }, [contacts])
     
     useEffect(() => {
