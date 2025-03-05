@@ -28,7 +28,6 @@ const ChatContactsScreen = () => {
         setModalVisible(false);
         })();
     }, [contacts])
-    
     useEffect(() => {
         socket.on('msg', async (msg) => {
             try {

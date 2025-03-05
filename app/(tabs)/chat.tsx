@@ -8,6 +8,7 @@ import socket from '@/constants/Socket';
 import {useRoute} from "@react-navigation/native"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from 'expo-file-system';
+const CONTACTS_KEY = "chat_contacts";
 export default function Chat() {
     const {uid} = useRoute().params;
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
@@ -21,7 +22,6 @@ export default function Chat() {
         socket.emit('chat',uid,{msg:txt.trim(),yar});
         uid!=yar && smgs(p=>[...p,{msg:txt.trim(),yar}]);
         stxt('');
-
     }
     useEffect(()=>{
         (async ()=>{
@@ -36,25 +36,32 @@ export default function Chat() {
                 const fileInfo = await FileSystem.getInfoAsync(path);
                 if (!fileInfo.exists) {
                     await FileSystem.writeAsStringAsync(path, JSON.stringify([msg]), { encoding: FileSystem.EncodingType.UTF8 });
-                    // list contact push 1st new message
+                    const storedContacts = await AsyncStorage.getItem(CONTACTS_KEY);
+                    await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify([{name:'unknown',id:msg.yar,new:1},...storedContacts]));
                     return;
                 }
-
                 const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
                 const parsedData = JSON.parse(oldData);
-
                 await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, msg]), { encoding: FileSystem.EncodingType.UTF8 });
-                smgs([...parsedData,msg]);
-
+                uid === msg.yar && smgs([...parsedData,msg]);
+                uid === msg.yar ||
+                    await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(moveToFirst(await AsyncStorage.getItem(CONTACTS_KEY),msg.yar)));
             } catch (error) {
                 console.error('Error handling file:', error);
             }
         });
-
         return ()=>{
             socket.off('msg');
         }
     },[]) 
+    function moveToFirst(arr, targetId) {
+        const index = arr.findIndex(item => item.id === targetId);
+        if (index > -1) {
+            const [item] = arr.splice(index, 1);
+            arr.unshift({...item,new:item.new?item.new+1:1});
+        }
+        return arr;
+    }
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <ThemedView style={style.chat}>
