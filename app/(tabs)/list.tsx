@@ -20,6 +20,11 @@ const ChatContactsScreen = () => {
     const [yar,syar] = useState("");
     const nav = useNavigation()
     useEffect(() => {
+      contacts.length &&
+        await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+    }, [contacts])
+    
+    useEffect(() => {
         socket.on('msg', async (msg) => {
             try {
                 const path = `${FileSystem.documentDirectory}${msg.yar}.nin`;
@@ -34,7 +39,7 @@ const ChatContactsScreen = () => {
                 const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
                 const parsedData = JSON.parse(oldData);
                 await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, msg]), { encoding: FileSystem.EncodingType.UTF8 });
-                // show new msg count push 1st in queue 
+                setContacts(moveToFirst(contacts,msg.yar));
             } catch (error) {
                 console.error('Error handling file:', error);
             }
@@ -44,6 +49,16 @@ const ChatContactsScreen = () => {
             socket.off("msg")
         }
     }, []);
+
+    function moveToFirst(arr, targetId) {
+        const index = arr.findIndex(item => item.id === targetId);
+        if (index > -1) {
+            const [item] = arr.splice(index, 1);
+            arr.unshift({...item,new:item.new?item.new+1:1});
+        }
+        return arr;
+    }
+
     const loadContacts = async () => {
         try {
             const storedContacts = await AsyncStorage.getItem(CONTACTS_KEY);
@@ -57,14 +72,25 @@ const ChatContactsScreen = () => {
     };
     const addContact = async () => {
         if (!name.trim()) return;
-    // check uuid alredy exist
+        const index = contacts.findIndex(item => item.id === uid);
+        if(-1 < index){
+
+            Alert.alert(
+                `uid alredy exist in ${contacts[index].name}`,
+                "Are you sure you want to rewrite this contact?",
+                [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "ok", style: "destructive", onPress: () => setContacts(p=>p.map(i=>i.id===uid?{...i,name:name.trim()}:i))},
+                ]
+            );
+            return;
+        }
         const newContact = {
             id: uid ,
             name: name.trim(),
         };
         const updatedContacts = [...contacts, newContact];
         setContacts(updatedContacts);
-        await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(updatedContacts));
 
         sname("");
         suid("");
@@ -73,7 +99,6 @@ const ChatContactsScreen = () => {
     const deleteContact = async (contactId) => {
         const updatedContacts = contacts.filter((contact) => contact.id !== contactId);
         setContacts(updatedContacts);
-        await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(updatedContacts));
     };
     const showDeleteAlert = (contactId) => {
         Alert.alert(

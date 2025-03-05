@@ -10,7 +10,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from 'expo-file-system';
 export default function Chat() {
     const {uid} = useRoute().params;
-    const borderColor = useThemeColor({light:undefined,dark:undefined},'text');
+    const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const [txt,stxt] = useState('');
     const [yar,syar] = useState('');
     const [msgs,smgs] = useState([]);
@@ -63,9 +63,9 @@ export default function Chat() {
                     renderItem={({item})=><View style={[style.msg,yar==item.yar?{alignSelf:"flex-end"}:{alignSelf:'flex-start'},{borderColor}]}>
                         <ThemedText>{item.msg}</ThemedText>
                     </View>}
-                onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}
-                                    onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
-              />
+                    onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}
+                    onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
+                />
                 <ThemedView style={style.eventArea}>
                     <ThemedView style={[style.textArea,{borderColor}]} >
                         <ThemedInput style={style.inputfield} placeholder='Tyye...' value={txt} onChangeText={stxt} />
