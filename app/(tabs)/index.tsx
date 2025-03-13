@@ -1,49 +1,64 @@
-import { useEffect } from 'react';
-import { StyleSheet, ScrollView,PermissionsAndroid,  TouchableOpacity} from 'react-native';
+import { useEffect,useState } from 'react';
+import { StyleSheet, TouchableOpacity, Platform, FlatList} from 'react-native';
+import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from '@/components/ThemedText';
-import {useNavigation} from 'expo-router'
-// import RNFS from "react-native-fs"
-;
+import { useNavigation } from 'expo-router';
+import RNFS from 'react-native-fs';
+import  ManageExternalStorage  from 'react-native-external-storage-permission';
 export default function HomeScreen() {
-    const nav = useNavigation()
-    useEffect(()=>{
-        // (async ()=>{
-        //     try {
-        //         const granted = await PermissionsAndroid.request(
-        //             PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
-        //         );
-        //         if (granted == PermissionsAndroid.RESULTS.GRANTED) {
-        //             getfile()
-        //         }
-        //     } catch (err) {
-        //         console.error(err);
-        //     }})();
-    },[])
-    // const getfile = async ()=>{
-    //     const dirs = [RNFS.ExternalStorageDirectoryPath];
-    //     let files = [];
+    const nav = useNavigation();
+    const [file, setfile] = useState([]);
+    useEffect(() => {
 
-    //     for (const dir of dirs) {
-    //         try {
-    //             const items = await RNFS.readDir(dir);
-    //             items.forEach((item) => {
-    //                 if (item.isFile() && item.name.match(/\.(pdf|docx|txt|xlsx|pptx)$/i)) {
-    //                     files.push(item.path);
-    //                 }
-    //             });
-    //         } catch (err) {
-    //             console.error('Error reading directory:', err);
-    //         }
-    //     }
+        (async () => {
+            try {
+                const granted = await ManageExternalStorage.checkAndGrantPermission();
+                if (granted) {
+                    getFiles();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        })();
 
-    //     console.log('Documents:', files);
-    // }
+    }, []);
+
+    const getFiles = async () => {
+        try {
+            const rootDir = RNFS.ExternalStorageDirectoryPath;
+            let files = [];
+            let queue = [rootDir];
+
+            while (queue.length > 0) {
+                const currentDir = queue.shift();
+                try {
+                    const items = await RNFS.readDir(currentDir);
+                    for (const item of items) {
+                        if (item.isFile() && item.name.match(/\.(pdf|docx|txt|xlsx|pptx)$/i)) {
+                            files.push({path:item.path,name:item.name});
+                        } else if (item.isDirectory()) {
+                            if (currentDir.includes('/Android')) continue;
+                            queue.push(item.path);
+                        }
+                    }
+                } catch (err) {
+                    console.error(currentDir, err);
+                }
+            }
+                setfile(files)
+
+        } catch (err) {
+            console.error('Error reading directory:', err);
+        }
+    };
+
     return (
-        <ScrollView>
-            <TouchableOpacity onPress={()=>{nav.navigate('list')}}><ThemedText>
-            chat</ThemedText> 
+        <ThemedView>
+            <TouchableOpacity onPress={() => nav.navigate('list')}>
+                <ThemedText>chat</ThemedText>
             </TouchableOpacity>
-        </ScrollView>
+            <FlatList data={file} keyExtractor={(_,i)=>i} renderItem={({item})=><ThemedText>{item.name}</ThemedText>}/>
+        </ThemedView>
     );
 }
 
@@ -65,3 +80,4 @@ const styles = StyleSheet.create({
         position: 'absolute',
     },
 });
+
