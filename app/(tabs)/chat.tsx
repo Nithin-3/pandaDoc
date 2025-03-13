@@ -11,18 +11,29 @@ import * as FileSystem from 'expo-file-system';
 import {Ionicons} from "@expo/vector-icons";
 const CONTACTS_KEY = "chat_contacts";
 import {useNavigation} from 'expo-router'
+type RouteParams = {
+    uid: string;
+    nam: string;
+};
+
 export default function Chat() {
-    const {uid,nam} = useRoute().params;
+    const { uid, nam } = useRoute().params as RouteParams;
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const [txt,stxt] = useState('');
     const [yar,syar] = useState('');
-    const [msgs,smgs] = useState([]);
+    const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
     const [edit,sedit] = useState(false);
-    const flatlis = useRef();
+    const flatlis = useRef<FlatList>(null);
     const title = useRef();
     const nav = useNavigation();
     const [titNam,stitNam] = useState(nam);
-    AsyncStorage.getItem("uid").then(syar);
+    AsyncStorage.getItem("uid").then(value => {
+            if (value !== null) {
+                syar(value);
+            } else {
+                syar('santhosh sivam B'); 
+            }
+        });
     const sendMsg = ()=>{
         if(!txt.trim())return;
         socket.emit('chat',uid,{msg:txt.trim(),yar});
@@ -32,11 +43,11 @@ export default function Chat() {
     const changeNam = async ()=>{
         sedit((prevEdit) => {
               if (prevEdit) {
-                AsyncStorage.getItem(CONTACTS_KEY).then((t) => JSON.parse(t)).then((c) =>c.map((v) => (v.id == uid ? { ...v, name: titNam } : v))).then(async (C) => await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(C)));
+                AsyncStorage.getItem(CONTACTS_KEY).then((t) => JSON.parse(t||'[]')).then((c) =>c.map((v: { id: string; }) => (v.id == uid ? { ...v, name: titNam } : v))).then(async (C) => await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(C)));
         console.log('jhuyhhgggfjf')
 
             } else {
-               setTimeout(()=>title?.current?.focus(),100)
+               setTimeout(()=>title.current?.focus(),100)
         console.log('jfjf')
             }
             return !prevEdit;
@@ -78,8 +89,8 @@ export default function Chat() {
             socket.off('msg');
         }
     },[]) 
-    function moveToFirst(arr, targetId) {
-        const index = arr.findIndex(item => item.id === targetId);
+    function moveToFirst(arr: any[] , targetId: string) {
+        const index = arr.findIndex((item: { id: string; }) => item.id === targetId);
         if (index > -1) {
             const [item] = arr.splice(index, 1);
             arr.unshift({...item,new:item.new?item.new+1:1});

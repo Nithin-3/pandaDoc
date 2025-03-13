@@ -2,42 +2,42 @@ import { useEffect } from 'react';
 import { StyleSheet, ScrollView,PermissionsAndroid,  TouchableOpacity} from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import {useNavigation} from 'expo-router'
-import RNFS from "react-native-fs"
+// import RNFS from "react-native-fs"
 ;
 export default function HomeScreen() {
     const nav = useNavigation()
     useEffect(()=>{
-        (async ()=>{
-            try {
-                const granted = await PermissionsAndroid.request(
-                    PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
-                );
-                if (granted == PermissionsAndroid.RESULTS.GRANTED) {
-                    getfile()
-                }
-            } catch (err) {
-                console.error(err);
-            }})();
+        // (async ()=>{
+        //     try {
+        //         const granted = await PermissionsAndroid.request(
+        //             PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE
+        //         );
+        //         if (granted == PermissionsAndroid.RESULTS.GRANTED) {
+        //             getfile()
+        //         }
+        //     } catch (err) {
+        //         console.error(err);
+        //     }})();
     },[])
-    const getfile = async ()=>{
-        const dirs = [RNFS.ExternalStorageDirectoryPath];
-        let files = [];
+    // const getfile = async ()=>{
+    //     const dirs = [RNFS.ExternalStorageDirectoryPath];
+    //     let files = [];
 
-        for (const dir of dirs) {
-            try {
-                const items = await RNFS.readDir(dir);
-                items.forEach((item) => {
-                    if (item.isFile() && item.name.match(/\.(pdf|docx|txt|xlsx|pptx)$/i)) {
-                        files.push(item.path);
-                    }
-                });
-            } catch (err) {
-                console.error('Error reading directory:', err);
-            }
-        }
+    //     for (const dir of dirs) {
+    //         try {
+    //             const items = await RNFS.readDir(dir);
+    //             items.forEach((item) => {
+    //                 if (item.isFile() && item.name.match(/\.(pdf|docx|txt|xlsx|pptx)$/i)) {
+    //                     files.push(item.path);
+    //                 }
+    //             });
+    //         } catch (err) {
+    //             console.error('Error reading directory:', err);
+    //         }
+    //     }
 
-        console.log('Documents:', files);
-    }
+    //     console.log('Documents:', files);
+    // }
     return (
         <ScrollView>
             <TouchableOpacity onPress={()=>{nav.navigate('list')}}><ThemedText>

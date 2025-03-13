@@ -7,22 +7,31 @@ import { ThemedView } from "@/components/ThemedView";
 import { ThemedInput } from "@/components/ThemedInput";
 import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
 import * as clipbord from "expo-clipboard";
-import {useNavigation} from 'expo-router'
+import {useNavigation, } from 'expo-router'
 import * as FileSystem from 'expo-file-system';
 import socket from '@/constants/Socket';
 const CONTACTS_KEY = "chat_contacts";
 
 const ChatContactsScreen = () => {
-    const [contacts, setContacts] = useState([]);
+    interface Contact {
+        id: string;
+        name: string;
+        new?: number;
+    }
+
+    const [contacts, setContacts] = useState<Contact[]>([]);
     const [name, sname] = useState("");
     const [uid, suid] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
     const [yar,syar] = useState("");
-    const nav = useNavigation()
+    type ChatScreenNavigationProp = {
+        navigate: (screen: string, params?: { uid: string; nam: string }) => void;
+    };
+    
+    const nav = useNavigation<ChatScreenNavigationProp>();
     useEffect(() => {
         (async()=>{
-      contacts.length &&
-        await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+      contacts.length && await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
         sname("");
         suid("");
         setModalVisible(false);
@@ -54,7 +63,7 @@ const ChatContactsScreen = () => {
         }
     }, []);
 
-    function moveToFirst(arr, targetId) {
+    function moveToFirst(arr:any[], targetId:string) {
         const index = arr.findIndex(item => item.id === targetId);
         if (index > -1) {
             const [item] = arr.splice(index, 1);
@@ -66,7 +75,7 @@ const ChatContactsScreen = () => {
     const loadContacts = async () => {
         try {
             const storedContacts = await AsyncStorage.getItem(CONTACTS_KEY);
-            syar(await AsyncStorage.getItem('uid'));
+            syar(await AsyncStorage.getItem('uid') || '');
             if (storedContacts) {
                 setContacts(JSON.parse(storedContacts));
             }
@@ -100,11 +109,11 @@ const ChatContactsScreen = () => {
         suid("");
         setModalVisible(false);
     };
-    const deleteContact = async (contactId) => {
+    const deleteContact = async (contactId:String) => {
         const updatedContacts = contacts.filter((contact) => contact.id !== contactId);
         setContacts(updatedContacts);
     };
-    const showDeleteAlert = (contactId) => {
+    const showDeleteAlert = (contactId:string) => {
         Alert.alert(
             "Delete Contact",
             "Are you sure you want to delete this contact?",
@@ -114,7 +123,7 @@ const ChatContactsScreen = () => {
             ]
         );
     };
-    const renderSwipeableContact = ({ item }) => (
+    const renderSwipeableContact = ({ item }: { item: Contact }) => (
         <Swipeable
             renderRightActions={() => (
                 <TouchableOpacity style={styles.deleteButton} onPress={() => showDeleteAlert(item.id)}>
