@@ -8,8 +8,13 @@ import  ManageExternalStorage  from 'react-native-external-storage-permission';
 export default function HomeScreen() {
     const nav = useNavigation();
     const [file, setfile] = useState<{ path: string; name: string }[]>([]);
+    const [cht,sCht] = useState(false);
+    useState(()=>{
+        return nav.addListener('focus', () => {
+        sCht(false);
+        })
+    },[nav])
     useEffect(() => {
-
         (async () => {
             try {
                 const granted = await ManageExternalStorage.checkAndGrantPermission();
@@ -20,7 +25,6 @@ export default function HomeScreen() {
                 console.error(err);
             }
         })();
-
     }, []);
 
     const getFiles = async () => {
@@ -28,7 +32,6 @@ export default function HomeScreen() {
             const rootDir = RNFS.ExternalStorageDirectoryPath;
             let files = [];
             let queue = [rootDir];
-
             while (queue.length > 0) {
                 const currentDir:String = queue.shift() || '';
                 try {
@@ -51,13 +54,15 @@ export default function HomeScreen() {
             console.error('Error reading directory:', err);
         }
     };
+    const list = ({item})=>(
+            <TouchableOpacity onPress={() =>{cht? nav.navigate('list' as never):null}} onLongPress={()=>{sCht(p=>!p)}}>
+                <ThemedText>{item.name}</ThemedText>
+            </TouchableOpacity>
+    )
 
     return (
         <ThemedView>
-            <TouchableOpacity onPress={() => nav.navigate('list' as never)}>
-                <ThemedText>chat</ThemedText>
-            </TouchableOpacity>
-            <FlatList data={file} keyExtractor={(_,i)=>i.toString()} renderItem={({item})=><ThemedText>{item.name}</ThemedText>}/>
+            <FlatList data={file} keyExtractor={i=>i.path} renderItem={list}/>
         </ThemedView>
     );
 }
