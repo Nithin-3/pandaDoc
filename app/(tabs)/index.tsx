@@ -7,7 +7,7 @@ import RNFS from 'react-native-fs';
 import  ManageExternalStorage  from 'react-native-external-storage-permission';
 export default function HomeScreen() {
     const nav = useNavigation();
-    const [file, setfile] = useState([]);
+    const [file, setfile] = useState<{ path: string; name: string }[]>([]);
     useEffect(() => {
 
         (async () => {
@@ -30,9 +30,9 @@ export default function HomeScreen() {
             let queue = [rootDir];
 
             while (queue.length > 0) {
-                const currentDir = queue.shift();
+                const currentDir:String = queue.shift() || '';
                 try {
-                    const items = await RNFS.readDir(currentDir);
+                    const items = await RNFS.readDir(`${currentDir}`);
                     for (const item of items) {
                         if (item.isFile() && item.name.match(/\.(pdf|docx|txt|xlsx|pptx)$/i)) {
                             files.push({path:item.path,name:item.name});
@@ -54,10 +54,10 @@ export default function HomeScreen() {
 
     return (
         <ThemedView>
-            <TouchableOpacity onPress={() => nav.navigate('list')}>
+            <TouchableOpacity onPress={() => nav.navigate('list' as never)}>
                 <ThemedText>chat</ThemedText>
             </TouchableOpacity>
-            <FlatList data={file} keyExtractor={(_,i)=>i} renderItem={({item})=><ThemedText>{item.name}</ThemedText>}/>
+            <FlatList data={file} keyExtractor={(_,i)=>i.toString()} renderItem={({item})=><ThemedText>{item.name}</ThemedText>}/>
         </ThemedView>
     );
 }
