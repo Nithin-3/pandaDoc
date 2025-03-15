@@ -3,12 +3,14 @@ import { StyleSheet, TouchableOpacity, Platform, FlatList} from 'react-native';
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from '@/components/ThemedText';
 import { useNavigation } from 'expo-router';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import RNFS from 'react-native-fs';
 import  ManageExternalStorage  from 'react-native-external-storage-permission';
 import FileViewer from "react-native-file-viewer";
 export default function HomeScreen() {
     const nav = useNavigation();
     const [file, setfile] = useState<{ path: string; name: string }[]>([]);
+    const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const [cht,sCht] = useState(false);
     useState(()=>{
         return nav.addListener('focus', () => {
@@ -67,17 +69,18 @@ export default function HomeScreen() {
 
     }
     const list = ({item})=>(
-        <TouchableOpacity onPress={() =>{cht? nav.navigate('list' as never):openFile(item.path)}} onLongPress={()=>{sCht(p=>!p)}}>
+        <TouchableOpacity style={[styles.lisTxt,{borderColor}]} onPress={() =>{cht? nav.navigate('list' as never):openFile(item.path)}} onLongPress={()=>{sCht(p=>!p)}}>
             <ThemedText>{item.name}</ThemedText>
         </TouchableOpacity>
     )
 
     return (
-        <ThemedView>
+        <ThemedView style={styles.root}>
             {file.length?
             <FlatList data={file} keyExtractor={i=>i.path} renderItem={list}/>:
-                <ThemedView>
-                    <ThemedText>loading</ThemedText>
+                <ThemedView style={styles.loadSceen}>
+                    <ThemedText>loading...</ThemedText>
+                    <ThemedText>Read all document it may take  some time...</ThemedText>
                 </ThemedView>
             }
         </ThemedView>
@@ -85,21 +88,23 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-    titleContainer: {
-        flexDirection: 'row',
+    root:{
+        flex:1,
+        position:"relative",
+        },
+    loadSceen:{
+        flex:1,
+        justifyContent:"center",
         alignItems: 'center',
-        gap: 8,
     },
-    stepContainer: {
-        gap: 8,
-        marginBottom: 8,
+    lisTxt:{
+        alignSelf: 'flex-start',
+        justifyContent:"center",
+        padding:7,
+        borderRadius:15,
+        borderWidth:1,
+        width:'auto',
     },
-    reactLogo: {
-        height: 20,
-        width: 200,
-        bottom: 0,
-        left: 0,
-        position: 'absolute',
-    },
+
 });
 
