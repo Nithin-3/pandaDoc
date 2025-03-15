@@ -5,13 +5,14 @@ import { ThemedText } from '@/components/ThemedText';
 import { useNavigation } from 'expo-router';
 import RNFS from 'react-native-fs';
 import  ManageExternalStorage  from 'react-native-external-storage-permission';
+import FileViewer from "react-native-file-viewer";
 export default function HomeScreen() {
     const nav = useNavigation();
     const [file, setfile] = useState<{ path: string; name: string }[]>([]);
     const [cht,sCht] = useState(false);
     useState(()=>{
         return nav.addListener('focus', () => {
-        sCht(false);
+            sCht(false);
         })
     },[nav])
     useEffect(() => {
@@ -48,21 +49,37 @@ export default function HomeScreen() {
                     console.error(currentDir, err);
                 }
             }
-                setfile(files)
+            setfile(files)
 
         } catch (err) {
             console.error('Error reading directory:', err);
         }
     };
+    const openFile=async(uri:string)=>{
+        uri = `file://${uri}`
+        console.log(uri);
+
+        try {
+            nav.navigate(uri.match(/\.(pdf)$/i)?"pdf":"doc",{uri});
+        } catch (error) {
+            console.error('Error opening file:', error);
+        }
+
+    }
     const list = ({item})=>(
-            <TouchableOpacity onPress={() =>{cht? nav.navigate('list' as never):null}} onLongPress={()=>{sCht(p=>!p)}}>
-                <ThemedText>{item.name}</ThemedText>
-            </TouchableOpacity>
+        <TouchableOpacity onPress={() =>{cht? nav.navigate('list' as never):openFile(item.path)}} onLongPress={()=>{sCht(p=>!p)}}>
+            <ThemedText>{item.name}</ThemedText>
+        </TouchableOpacity>
     )
 
     return (
         <ThemedView>
-            <FlatList data={file} keyExtractor={i=>i.path} renderItem={list}/>
+            {file.length?
+            <FlatList data={file} keyExtractor={i=>i.path} renderItem={list}/>:
+                <ThemedView>
+                    <ThemedText>loading</ThemedText>
+                </ThemedView>
+            }
         </ThemedView>
     );
 }
