@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react";
-import { FlatList, TouchableOpacity, StyleSheet, Modal, Alert } from "react-native";
+import { useState, useEffect, useLayoutEffect } from "react";
+import { FlatList, TouchableOpacity, StyleSheet, Modal, Alert ,SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import uuid from "react-native-uuid";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedInput } from "@/components/ThemedInput";
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
+import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation, } from 'expo-router'
 import * as FileSystem from 'expo-file-system';
@@ -24,11 +26,35 @@ const ChatContactsScreen = () => {
     const [uid, suid] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
     const [yar,syar] = useState("");
+    const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     type ChatScreenNavigationProp = {
         navigate: (screen: string, params?: { uid: string; nam: string }) => void;
     };
-    
+
     const nav = useNavigation<ChatScreenNavigationProp>();
+    const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+    useEffect(() => {
+        const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+            setIsKeyboardVisible(true);
+        });
+        const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+            setIsKeyboardVisible(false);
+        });
+
+        return () => {
+            showSubscription.remove();
+            hideSubscription.remove();
+        };
+    }, []);
+    useLayoutEffect(()=>{
+        nav.setOptions({
+            headerShown: false,
+        });
+        return nav.addListener('focus', () => {
+            loadContacts();
+        })
+    },[nav])
     useEffect(() => {
         (async()=>{
       contacts.length && await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
@@ -57,12 +83,12 @@ const ChatContactsScreen = () => {
                 console.error('Error handling file:', error);
             }
         });
-        loadContacts();
         return ()=>{
             socket.off("msg")
         }
     }, []);
 
+    const vis = () => setModalVisible(p=>!p)
     function moveToFirst(arr:any[], targetId:string) {
         const index = arr.findIndex(item => item.id === targetId);
         if (index > -1) {
@@ -132,71 +158,62 @@ const ChatContactsScreen = () => {
             )}
         >
             <TouchableOpacity onPress={()=>{nav.navigate('chat',{uid:item.id,nam:item.name})}} onLongPress={() => showDeleteAlert(item.id)} style={styles.contactItem}>
-                <ThemedText style={styles.contactName}>{item.name}</ThemedText>
+                <ThemedText style={styles.contactName}>{item.name} {item.new}</ThemedText>
                 <ThemedText style={styles.contactUuid}>{item.id}</ThemedText>
-                <ThemedText>{item.new}</ThemedText>
             </TouchableOpacity>
         </Swipeable>
     );
 
     return (
-        <GestureHandlerRootView style={styles.container}>
-            <ThemedView style={styles.container}>
-                <TouchableOpacity onLongPress={()=>{clipbord.setStringAsync(yar)}}>
-                <ThemedText>{yar}</ThemedText>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
-                    <ThemedText style={styles.addButtonText}>Add Contact</ThemedText>
-                </TouchableOpacity>
-
-                <FlatList
-                    data={contacts}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderSwipeableContact}
-                />
-
-                <Modal visible={modalVisible} animationType="slide" transparent>
-                    <ThemedView style={styles.modalContainer}>
-                        <ThemedView style={styles.modalContent}>
-                            <ThemedText style={styles.modalTitle}>Add Contact</ThemedText>
-
-                            <ThemedInput
-                                placeholder="Enter contact name"
-                                value={name}
-                                onChangeText={sname}
-                            />
-
-                            <ThemedInput
-                                placeholder="Enter UUID"
-                                value={uid}
-                                onChangeText={suid}
-                            />
-
-                            <ThemedView style={styles.modalButtons}>
-                                <TouchableOpacity style={styles.modalButton} onPress={() => setModalVisible(false)}>
-                                    <ThemedText style={styles.modalButtonText}>Cancel</ThemedText>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.modalButton} onPress={addContact}>
-                                    <ThemedText style={styles.modalButtonText}>Save</ThemedText>
-                                </TouchableOpacity>
-                            </ThemedView>
-                        </ThemedView>
+        <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
+            <GestureHandlerRootView>
+                <ThemedView style={styles.container}>
+                    <ThemedView style={styles.eventArea} darkColor="#151718">
+                        <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}><Ionicons name="arrow-back" size={28} color={borderColor} /></TouchableOpacity>
+                        <ThemedText style={{fontSize:21,flex:0.8}}>chats</ThemedText>
+                        <TouchableOpacity onPress={vis} style={{flex:0.1}}><Ionicons name="add" size={28} color={borderColor} /></TouchableOpacity>
                     </ThemedView>
-                </Modal>
-            </ThemedView>
-        </GestureHandlerRootView>
+                    <TouchableOpacity style={styles.uid} onLongPress={()=>{clipbord.setStringAsync(yar)}}>
+                        <ThemedText type="link">{yar}</ThemedText>
+                    </TouchableOpacity>
+                    <FlatList data={contacts} keyExtractor={(item) => item.id} renderItem={renderSwipeableContact}/>
+                    <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={vis}>
+
+                        <TouchableWithoutFeedback onPress={()=>{isKeyboardVisible?Keyboard.dismiss():vis()}}>
+                        <ThemedView style={styles.modalContainer}>
+                            <Pressable style={[styles.modalContent,{borderColor}]}>
+                                <ThemedText style={styles.modalTitle}>Add Contact</ThemedText>
+
+                                <ThemedInput placeholder="Enter contact name" style={styles.inp} value={name} onChangeText={sname}/>
+                                <ThemedInput placeholder="Enter UUID" style={styles.inp} value={uid} onChangeText={suid}/>
+
+                                <ThemedView style={styles.modalButtons}>
+                                    <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={vis}>
+                                        <ThemedText>Cancel</ThemedText>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={addContact}>
+                                        <ThemedText>Save</ThemedText>
+                                    </TouchableOpacity>
+                                </ThemedView>
+                            </Pressable>
+                        </ThemedView>
+                        </TouchableWithoutFeedback>
+                    </Modal>
+                </ThemedView>
+            </GestureHandlerRootView>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    container: { flex: 1,},
-    addButton: {
-        padding: 12,
-        borderRadius: 5,
-        alignItems: "center",
-        marginBottom: 20,
+    eventArea:{
+        flexDirection:'row',
+        position:'relative',
+        padding:15,
+        justifyContent:"center",
+        alignItems: 'center',
     },
-    addButtonText: {fontSize: 16, fontWeight: "bold" },
+    container: { flex: 1,},
     contactItem: {
         padding: 15,
         borderBottomWidth: 1,
@@ -222,21 +239,28 @@ const styles = StyleSheet.create({
         width: "80%",
         padding: 20,
         borderRadius: 10,
+        borderWidth: 2,
     },
     modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
     modalButtons: {
         flexDirection: "row",
         justifyContent: "space-between",
         marginTop: 15,
+        paddingHorizontal: 10,
     },
     modalButton: {
         padding: 10,
         borderRadius: 5,
-        flex: 1,
         alignItems: "center",
         marginHorizontal: 5,
+        borderWidth: 2,
     },
-    modalButtonText: { color: "white", fontWeight: "bold" },
+    uid:{
+        alignSelf: 'center',
+    },
+    inp:{
+        margin: 5,
+    }
 });
 
 export default ChatContactsScreen;

@@ -59,8 +59,6 @@ export default function HomeScreen() {
     };
     const openFile=async(uri:string)=>{
         uri = `file://${uri}`
-        console.log(uri);
-
         try {
             nav.navigate(uri.match(/\.(pdf)$/i)?"pdf":"doc",{uri});
         } catch (error) {

@@ -22,6 +22,7 @@ export default function Chat() {
     const [txt,stxt] = useState('');
     const [yar,syar] = useState('');
     const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
+    const [crntMsg,scrntMsg] = useState<{ msg: string; yar: string }>(null);
     const [edit,sedit] = useState(false);
     const flatlis = useRef<FlatList>(null);
     const title = useRef();
@@ -37,18 +38,16 @@ export default function Chat() {
     const sendMsg = ()=>{
         if(!txt.trim())return;
         socket.emit('chat',uid,{msg:txt.trim(),yar});
-        uid!=yar && smgs(p=>[...p,{msg:txt.trim(),yar}]);
+        uid!=yar && scrntMsg({msg:txt.trim(),yar});
         stxt('');
     }
     const changeNam = async ()=>{
         sedit((prevEdit) => {
               if (prevEdit) {
                 AsyncStorage.getItem(CONTACTS_KEY).then((t) => JSON.parse(t||'[]')).then((c) =>c.map((v: { id: string; }) => (v.id == uid ? { ...v, name: titNam } : v))).then(async (C) => await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(C)));
-        console.log('jhuyhhgggfjf')
 
             } else {
                setTimeout(()=>title.current?.focus(),100)
-        console.log('jfjf')
             }
             return !prevEdit;
         });
@@ -58,6 +57,27 @@ export default function Chat() {
             headerShown: false,
         });
     },[nav])
+    useEffect(() => {
+        if (crntMsg){
+            (async()=>{
+            const path = `${FileSystem.documentDirectory}${crntMsg.yar==yar?uid:crntMsg.yar}.nin`;
+            const fileInfo = await FileSystem.getInfoAsync(path);
+            if (!fileInfo.exists) {
+                await FileSystem.writeAsStringAsync(path, JSON.stringify([crntMsg]), { encoding: FileSystem.EncodingType.UTF8 });
+                const storedContacts = await AsyncStorage.getItem(CONTACTS_KEY);
+                await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify([{name:'unknown',id:crntMsg.yar,new:1},...storedContacts]));
+                return;
+            }
+            const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
+            const parsedData = JSON.parse(oldData);
+            await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, crntMsg]), { encoding: FileSystem.EncodingType.UTF8 });
+            (uid === crntMsg.yar || yar === crntMsg.yar) && smgs([...parsedData,crntMsg]);
+            (uid === crntMsg.yar || yar === crntMsg.yar) ||
+                await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(moveToFirst(await AsyncStorage.getItem(CONTACTS_KEY),crntMsg.yar)));
+            })();
+        }
+    }, [crntMsg])
+
     useEffect(()=>{
         (async ()=>{
             const path = `${FileSystem.documentDirectory}${uid}.nin`;
@@ -66,24 +86,7 @@ export default function Chat() {
             smgs(parsedData);
         })();
         socket.on('msg', async (msg) => {
-            try {
-                const path = `${FileSystem.documentDirectory}${msg.yar}.nin`;
-                const fileInfo = await FileSystem.getInfoAsync(path);
-                if (!fileInfo.exists) {
-                    await FileSystem.writeAsStringAsync(path, JSON.stringify([msg]), { encoding: FileSystem.EncodingType.UTF8 });
-                    const storedContacts = await AsyncStorage.getItem(CONTACTS_KEY);
-                    await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify([{name:'unknown',id:msg.yar,new:1},...storedContacts]));
-                    return;
-                }
-                const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
-                const parsedData = JSON.parse(oldData);
-                await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, msg]), { encoding: FileSystem.EncodingType.UTF8 });
-                uid === msg.yar && smgs([...parsedData,msg]);
-                uid === msg.yar ||
-                    await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(moveToFirst(await AsyncStorage.getItem(CONTACTS_KEY),msg.yar)));
-            } catch (error) {
-                console.error('Error handling file:', error);
-            }
+            scrntMsg(msg)
         });
         return ()=>{
             socket.off('msg');
@@ -155,10 +158,11 @@ const style = StyleSheet.create({
         position:'relative',
         alignItems:'center',
         borderWidth:1,
-        paddingHorizontal:5,
         borderRadius:20,
+        paddingLeft: 10,
         overflow:'hidden',
-        maxHeight:80
+        maxHeight:80,
+        minHeight: 40,
     },
     sendbtn:{
         flex:0.15,
