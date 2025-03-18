@@ -1,22 +1,23 @@
 import { useEffect,useState } from 'react';
-import { StyleSheet, TouchableOpacity, Platform, FlatList} from 'react-native';
+import { StyleSheet, TouchableOpacity, FlatList} from 'react-native';
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from '@/components/ThemedText';
 import { useNavigation } from 'expo-router';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import RNFS from 'react-native-fs';
 import  ManageExternalStorage  from 'react-native-external-storage-permission';
-import FileViewer from "react-native-file-viewer";
+// import FileViewer from "react-native-file-viewer";
 export default function HomeScreen() {
     const nav = useNavigation();
     const [file, setfile] = useState<{ path: string; name: string }[]>([]);
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const [cht,sCht] = useState(false);
-    useState(()=>{
-        return nav.addListener('focus', () => {
+    useEffect(() => {
+        const unsubscribe = nav.addListener('focus', () => {
             sCht(false);
-        })
-    },[nav])
+        });
+        return unsubscribe;
+    }, [nav]);
     useEffect(() => {
         (async () => {
             try {
@@ -40,7 +41,7 @@ export default function HomeScreen() {
                 try {
                     const items = await RNFS.readDir(`${currentDir}`);
                     for (const item of items) {
-                        if (item.isFile() && item.name.match(/\.(pdf|docx|txt|xlsx|pptx)$/i)) {
+                        if (item.isFile() && item.name.match(/\.(pdf|docx|txt|xlsx|pptx|xml)$/i)) {
                             files.push({path:item.path,name:item.name});
                         } else if (item.isDirectory()) {
                             if (currentDir.includes('/Android')) continue;
@@ -60,13 +61,13 @@ export default function HomeScreen() {
     const openFile=async(uri:string)=>{
         uri = `file://${uri}`
         try {
-            nav.navigate(uri.match(/\.(pdf)$/i)?"pdf":"doc",{uri});
+            nav.navigate(uri.match(/\.(pdf)$/i) ? "pdf" : "doc", { uri });
         } catch (error) {
             console.error('Error opening file:', error);
         }
 
     }
-    const list = ({item})=>(
+    const list = ({item}: { item: { path: string; name: string } })=>(
         <TouchableOpacity style={[styles.lisTxt,{borderColor}]} onPress={() =>{cht? nav.navigate('list' as never):openFile(item.path)}} onLongPress={()=>{sCht(p=>!p)}}>
             <ThemedText>{item.name}</ThemedText>
         </TouchableOpacity>

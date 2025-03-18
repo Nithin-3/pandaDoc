@@ -9,7 +9,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
 import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
-import {useNavigation, } from 'expo-router'
+import {useNavigation} from 'expo-router'
 import * as FileSystem from 'expo-file-system';
 import socket from '@/constants/Socket';
 const CONTACTS_KEY = "chat_contacts";
@@ -31,7 +31,7 @@ const ChatContactsScreen = () => {
         navigate: (screen: string, params?: { uid: string; nam: string }) => void;
     };
 
-    const nav = useNavigation<ChatScreenNavigationProp>();
+    const nav = useNavigation();
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
     useEffect(() => {

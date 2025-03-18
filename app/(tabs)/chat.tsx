@@ -11,6 +11,7 @@ import * as FileSystem from 'expo-file-system';
 import {Ionicons} from "@expo/vector-icons";
 const CONTACTS_KEY = "chat_contacts";
 import {useNavigation} from 'expo-router'
+import { TextInput } from 'react-native-gesture-handler';
 type RouteParams = {
     uid: string;
     nam: string;
@@ -22,10 +23,10 @@ export default function Chat() {
     const [txt,stxt] = useState('');
     const [yar,syar] = useState('');
     const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
-    const [crntMsg,scrntMsg] = useState<{ msg: string; yar: string }>(null);
+    const [crntMsg,scrntMsg] = useState<{ msg: string; yar: string } | null>(null);
     const [edit,sedit] = useState(false);
     const flatlis = useRef<FlatList>(null);
-    const title = useRef();
+    const title = useRef<TextInput | null>(null);
     const nav = useNavigation();
     const [titNam,stitNam] = useState(nam);
     AsyncStorage.getItem("uid").then(value => {
@@ -64,7 +65,7 @@ export default function Chat() {
             const fileInfo = await FileSystem.getInfoAsync(path);
             if (!fileInfo.exists) {
                 await FileSystem.writeAsStringAsync(path, JSON.stringify([crntMsg]), { encoding: FileSystem.EncodingType.UTF8 });
-                const storedContacts = await AsyncStorage.getItem(CONTACTS_KEY);
+                const storedContacts : string = await AsyncStorage.getItem(CONTACTS_KEY) || '[]';
                 await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify([{name:'unknown',id:crntMsg.yar,new:1},...storedContacts]));
                 return;
             }
@@ -73,7 +74,7 @@ export default function Chat() {
             await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, crntMsg]), { encoding: FileSystem.EncodingType.UTF8 });
             (uid === crntMsg.yar || yar === crntMsg.yar) && smgs([...parsedData,crntMsg]);
             (uid === crntMsg.yar || yar === crntMsg.yar) ||
-                await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(moveToFirst(await AsyncStorage.getItem(CONTACTS_KEY),crntMsg.yar)));
+                await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(moveToFirst(JSON.parse(await AsyncStorage.getItem(CONTACTS_KEY) || '[]') ,crntMsg.yar)));
             })();
         }
     }, [crntMsg])
