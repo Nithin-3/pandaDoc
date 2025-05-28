@@ -13,6 +13,7 @@ import {Ionicons} from "@expo/vector-icons";
 const CONTACTS_KEY = "chat_contacts";
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
+import {addChat,readChat,rmChat} from '@/constants/file';
 type RouteParams = {
     uid: string;
     nam: string;
@@ -24,8 +25,7 @@ export default function Chat() {
     const [txt,stxt] = useState('');
     const [yar,syar] = useState('');
     const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
-    const [crntMsg,scrntMsg] = useState<{ msg: string; yar: string } | null>(null);
-    const [lastModified, setLastModified] = useState(0);
+    const lstChng = useRef<number>(0);
     const [edit,sedit] = useState(false);
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
@@ -41,13 +41,7 @@ export default function Chat() {
     const sendMsg = ()=>{
         if(!txt.trim())return;
         socket.emit('chat',uid,{msg:txt.trim(),yar});
-        const fil=async()=>{
-            const path = `${FileSystem.documentDirectory}${uid}.nin`;
-            const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
-            const parsedData = JSON.parse(oldData);
-            await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, {msg:txt.trim(),yar}]), { encoding: FileSystem.EncodingType.UTF8 });
-        }
-        fil()
+        addChat(uid,{msg:txt.trim(),yar}) || console.log("chat not added")
         stxt('');
     }
     const changeNam = async ()=>{
@@ -67,15 +61,13 @@ export default function Chat() {
         });
     },[nav])
     useEffect(() => {
-            const path = `${FileSystem.documentDirectory}${crntMsg?.yar==yar?uid:crntMsg?.yar ?? uid}.nin`;
+            const path = `${FileSystem.documentDirectory}${uid}.nin`;
         const interval = setInterval(async () => {
             try {
                 const stats = await RNFS.stat(path);
-                if (stats.mtime && new Date(stats.mtime).getTime() !== lastModified) {
-                    const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
-                    const parsedData = JSON.parse(oldData);
-                    smgs(parsedData);
-                    setLastModified(new Date(stats.mtime).getTime());
+                if (stats.mtime && new Date(stats.mtime).getTime() > lstChng.current){
+            smgs(await readChat(uid));
+                    lstChng.current = new Date(stats.mtime).getTime();
                 }
             } catch (e) {
                 console.log('File read error:', e);
@@ -83,16 +75,13 @@ export default function Chat() {
         }, 1000); 
 
         return () => clearInterval(interval);
-    }, [lastModified,crntMsg]);
+    }, []);
     useEffect(()=>{
         (async ()=>{
-            const path = `${FileSystem.documentDirectory}${uid}.nin`;
-            const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
-            const parsedData = JSON.parse(oldData);
-            smgs(parsedData);
+            smgs(await readChat(uid));
         })();
         socket.on('msg', async (msg) => {
-            scrntMsg(msg)
+            addChat(msg.yar,msg)
         });
         return ()=>{
             socket.off('msg');
@@ -126,7 +115,7 @@ export default function Chat() {
                     ref={flatlis}
                     data={msgs}
                     keyExtractor={(item,index) => item.yar+index}
-                    renderItem={({item})=><ThemedView style={[style.msg,yar==item.yar?{alignSelf:"flex-end"}:{alignSelf:'flex-start'},{borderColor}]}>
+                    renderItem={({item})=><ThemedView style={[style.msg,yar!=item.yar?{alignSelf:"flex-end"}:{alignSelf:'flex-start'},{borderColor}]}>
                         <ThemedText>{item.msg}</ThemedText>
                     </ThemedView>}
                     onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}

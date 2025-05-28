@@ -10,8 +10,8 @@ import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler"
 import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
-import * as FileSystem from 'expo-file-system';
 import socket from '@/constants/Socket';
+import {addChat,readChat,rmChat} from '@/constants/file';
 const CONTACTS_KEY = "chat_contacts";
 
 const ChatContactsScreen = () => {
@@ -65,23 +65,7 @@ const ChatContactsScreen = () => {
     }, [contacts])
     useEffect(() => {
         socket.on('msg', async (msg) => {
-            try {
-                const path = `${FileSystem.documentDirectory}${msg.yar}.nin`;
-                const fileInfo = await FileSystem.getInfoAsync(path);
-                if (!fileInfo.exists) {
-                    suid(msg.yar);
-                    sname('unknown');
-                    addContact();
-                    await FileSystem.writeAsStringAsync(path, JSON.stringify([msg]), { encoding: FileSystem.EncodingType.UTF8 });
-                    return;
-                }
-                const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
-                const parsedData = JSON.parse(oldData);
-                await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, msg]), { encoding: FileSystem.EncodingType.UTF8 });
-                setContacts(moveToFirst(contacts,msg.yar));
-            } catch (error) {
-                console.error('Error handling file:', error);
-            }
+            await addChat(msg.yar,msg) ?? (suid(msg.yar),sname("unknown"),addContact());
         });
         return ()=>{
             socket.off("msg")
@@ -137,9 +121,7 @@ const ChatContactsScreen = () => {
     };
     const deleteContact = async (contactId:String) => {
         const updatedContacts = contacts.filter((contact) => contact.id !== contactId);
-        const path = `${FileSystem.documentDirectory}${contactId}.nin`;
-        await FileSystem.deleteAsync(path)
-        setContacts(updatedContacts);
+        rmChat(contactId) && setContacts(updatedContacts);
     };
     const showDeleteAlert = (contactId:string) => {
         Alert.alert(
