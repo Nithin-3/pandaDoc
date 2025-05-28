@@ -113,6 +113,7 @@ const ChatContactsScreen = () => {
             name: name.trim(),
         };
         const updatedContacts = [...contacts, newContact];
+        addChat(uid,null);
         setContacts(updatedContacts);
 
         sname("");
