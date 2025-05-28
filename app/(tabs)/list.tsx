@@ -137,6 +137,8 @@ const ChatContactsScreen = () => {
     };
     const deleteContact = async (contactId:String) => {
         const updatedContacts = contacts.filter((contact) => contact.id !== contactId);
+        const path = `${FileSystem.documentDirectory}${contactId}.nin`;
+        await FileSystem.deleteAsync(path)
         setContacts(updatedContacts);
     };
     const showDeleteAlert = (contactId:string) => {

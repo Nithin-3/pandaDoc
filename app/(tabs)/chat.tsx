@@ -1,5 +1,6 @@
 import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform} from 'react-native'
 import { useEffect,useState,useRef,useLayoutEffect,useCallback} from "react";
+import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedView } from '@/components/ThemedView';
@@ -24,6 +25,7 @@ export default function Chat() {
     const [yar,syar] = useState('');
     const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
     const [crntMsg,scrntMsg] = useState<{ msg: string; yar: string } | null>(null);
+    const [lastModified, setLastModified] = useState(0);
     const [edit,sedit] = useState(false);
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
@@ -39,7 +41,13 @@ export default function Chat() {
     const sendMsg = ()=>{
         if(!txt.trim())return;
         socket.emit('chat',uid,{msg:txt.trim(),yar});
-        uid!=yar && scrntMsg({msg:txt.trim(),yar});
+        const fil=async()=>{
+            const path = `${FileSystem.documentDirectory}${uid}.nin`;
+            const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
+            const parsedData = JSON.parse(oldData);
+            await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, {msg:txt.trim(),yar}]), { encoding: FileSystem.EncodingType.UTF8 });
+        }
+        fil()
         stxt('');
     }
     const changeNam = async ()=>{
@@ -59,26 +67,23 @@ export default function Chat() {
         });
     },[nav])
     useEffect(() => {
-        if (crntMsg){
-            (async()=>{
-            const path = `${FileSystem.documentDirectory}${crntMsg.yar==yar?uid:crntMsg.yar}.nin`;
-            const fileInfo = await FileSystem.getInfoAsync(path);
-            if (!fileInfo.exists) {
-                await FileSystem.writeAsStringAsync(path, JSON.stringify([crntMsg]), { encoding: FileSystem.EncodingType.UTF8 });
-                const storedContacts : string = await AsyncStorage.getItem(CONTACTS_KEY) || '[]';
-                await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify([{name:'unknown',id:crntMsg.yar,new:1},...storedContacts]));
-                return;
+            const path = `${FileSystem.documentDirectory}${crntMsg?.yar==yar?uid:crntMsg?.yar ?? uid}.nin`;
+        const interval = setInterval(async () => {
+            try {
+                const stats = await RNFS.stat(path);
+                if (stats.mtime && new Date(stats.mtime).getTime() !== lastModified) {
+                    const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
+                    const parsedData = JSON.parse(oldData);
+                    smgs(parsedData);
+                    setLastModified(new Date(stats.mtime).getTime());
+                }
+            } catch (e) {
+                console.log('File read error:', e);
             }
-            const oldData = await FileSystem.readAsStringAsync(path, { encoding: FileSystem.EncodingType.UTF8 });
-            const parsedData = JSON.parse(oldData);
-            await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, crntMsg]), { encoding: FileSystem.EncodingType.UTF8 });
-            (uid === crntMsg.yar || yar === crntMsg.yar) && smgs([...parsedData,crntMsg]);
-            (uid === crntMsg.yar || yar === crntMsg.yar) ||
-                await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(moveToFirst(JSON.parse(await AsyncStorage.getItem(CONTACTS_KEY) || '[]') ,crntMsg.yar)));
-            })();
-        }
-    }, [crntMsg])
+        }, 1000); 
 
+        return () => clearInterval(interval);
+    }, [lastModified,crntMsg]);
     useEffect(()=>{
         (async ()=>{
             const path = `${FileSystem.documentDirectory}${uid}.nin`;
