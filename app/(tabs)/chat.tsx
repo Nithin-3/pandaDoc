@@ -41,7 +41,6 @@ export default function Chat() {
     const sendMsg = ()=>{
         if(!txt.trim())return;
         socket.emit('chat',uid,{msg:txt.trim(),yar});
-        addChat(uid,{msg:txt.trim(),yar}) || console.log("chat not added")
         stxt('');
     }
     const changeNam = async ()=>{
@@ -81,7 +80,7 @@ export default function Chat() {
             smgs(await readChat(uid));
         })();
         socket.on('msg', async (msg) => {
-            addChat(msg.yar,msg)
+            addChat(msg.yar,msg) || console.log("chat not added")
         });
         return ()=>{
             socket.off('msg');
