@@ -10,13 +10,17 @@ import {useRoute} from "@react-navigation/native"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from 'expo-file-system';
 import {Ionicons} from "@expo/vector-icons";
-const CONTACTS_KEY = "chat_contacts";
+import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,RTCView,mediaDevices} from "react-native-webrtc"
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,rmChat} from '@/constants/file';
+const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
     nam: string;
+};
+const configuration = {
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 };
 
 export default function Chat() {
@@ -24,13 +28,17 @@ export default function Chat() {
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const [txt,stxt] = useState('');
     const [yar,syar] = useState('');
+    const [titNam,stitNam] = useState(nam);
     const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
-    const lstChng = useRef<number>(0);
     const [edit,sedit] = useState(false);
+    const lstChng = useRef<number>(0);
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
+    const pc = useRef(null);
+    const dataChannel = useRef(null);
+
     const nav = useNavigation();
-    const [titNam,stitNam] = useState(nam);
+
     AsyncStorage.getItem("uid").then(value => {
             if (value !== null) {
                 syar(value);
@@ -76,9 +84,12 @@ export default function Chat() {
         return () => clearInterval(interval);
     }, []);
     useEffect(()=>{
-        (async ()=>{
-            smgs(await readChat(uid));
-        })();
+        pc.current = new RTCPeerConnection(configuration);
+        dataChannel.current = pc.current.createDataChannel('file');
+        dataChannel.current.onmessage = (event) => {
+            // file handle event.data
+        }
+        (async ()=>smgs(await readChat(uid)))();
         socket.on('msg', async (msg) => {
             addChat(msg.yar,msg) || console.log("chat not added")
         });
