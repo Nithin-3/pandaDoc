@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform} from 'react-native'
+import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal} from 'react-native'
 import { useEffect,useState,useRef,useLayoutEffect,useCallback} from "react";
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
@@ -10,7 +10,8 @@ import {useRoute} from "@react-navigation/native"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from 'expo-file-system';
 import {Ionicons} from "@expo/vector-icons";
-import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,RTCView,mediaDevices} from "react-native-webrtc"
+import AntDesign from '@expo/vector-icons/AntDesign';
+import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,RTCView,mediaDevices,MediaStream} from "react-native-webrtc"
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,rmChat} from '@/constants/file';
@@ -31,21 +32,15 @@ export default function Chat() {
     const [titNam,stitNam] = useState(nam);
     const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
     const [edit,sedit] = useState(false);
+    const [call,scall] = useState(false);
     const lstChng = useRef<number>(0);
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
-    const pc = useRef(null);
-    const dataChannel = useRef(null);
-
+    const peer = useRef<RTCPeerConnection | null>(null);
+    const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const nav = useNavigation();
 
-    AsyncStorage.getItem("uid").then(value => {
-            if (value !== null) {
-                syar(value);
-            } else {
-                syar('santhosh sivam B'); 
-            }
-        });
     const sendMsg = ()=>{
         if(!txt.trim())return;
         socket.emit('chat',uid,{msg:txt.trim(),yar});
@@ -68,7 +63,14 @@ export default function Chat() {
         });
     },[nav])
     useEffect(() => {
-            const path = `${FileSystem.documentDirectory}${uid}.nin`;
+    AsyncStorage.getItem("uid").then(value => {
+            if (value !== null) {
+                syar(value);
+            } else {
+                syar('santhosh sivam B'); 
+            }
+        });
+        const path = `${FileSystem.documentDirectory}${uid}.nin`;
         const interval = setInterval(async () => {
             try {
                 const stats = await RNFS.stat(path);
@@ -84,17 +86,41 @@ export default function Chat() {
         return () => clearInterval(interval);
     }, []);
     useEffect(()=>{
-        pc.current = new RTCPeerConnection(configuration);
-        dataChannel.current = pc.current.createDataChannel('file');
-        dataChannel.current.onmessage = (event) => {
-            // file handle event.data
-        }
         (async ()=>smgs(await readChat(uid)))();
+        socket.on('offer', async (offer) => {
+            await peer.current.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await peer.current.createAnswer();
+            await peer.current.setLocalDescription(answer);
+            socket.emit('answer',uid, answer);
+            
+        })
+        socket.on('answer', async (answer) => {
+            await peer.current.setRemoteDescription(new RTCSessionDescription(answer));
+
+
+        })
+        socket.on('candidate', async (candidate) => {
+            try{
+                await peer.current.addIceCandidate(new RTCIceCandidate(candidate))
+            }catch(er){
+                console.warn(er)
+            }
+        })
+        socket.on('end-call',()=>{
+            enCall()
+        })
         socket.on('msg', async (msg) => {
             addChat(msg.yar,msg) || console.log("chat not added")
         });
         return ()=>{
+            socket.off('offer');
+            socket.off('answer');
+            socket.off("candidate")
+            socket.off('end-call');
             socket.off('msg');
+            peer.current?.close();
+            localStream?.getTracks().forEach(track => track.stop());;
+            remoteStream?.getTracks().forEach(track => track.stop());
         }
     },[]) 
     function moveToFirst(arr: any[] , targetId: string) {
@@ -105,43 +131,104 @@ export default function Chat() {
         }
         return arr;
     }
+    const stCall= async(vid:boolean=false)=>{
+        peer.current = new RTCPeerConnection(configuration);
+        peer.current.onicecandidate = (event) => {
+                if (event.candidate) {
+                      socket.emit('candidate', uid, event.candidate);
+                    }
+                  };
+        const stream = await mediaDevices.getUserMedia({audio:true,video:vid})
+        setLocalStream(stream);
+        stream.getTracks().forEach(track => peer.current?.addTrack(track, stream));
+        peer.current.ontrack = (event) => {
+            setRemoteStream(event.streams[0]);
+        }
+        scall(true)
+        const offer = await peer.current?.createOffer();
+        await peer.current?.setLocalDescription(offer);
+        socket.emit('offer', uid, offer);
+    }
+    const enCall = ()=>{
+        if (localStream) {    
+            localStream.getTracks().forEach(t=>t.stop())
+            setLocalStream(null)
+        }
+        if (remoteStream) {    
+            remoteStream.getTracks().forEach(t=>t.stop())
+            setRemoteStream(null)
+        }
+        if(peer.current){
+            peer.current.onicecandidate = null;
+        peer.current.ontrack = null;
+        peer.current.close();
+        peer.current = null;
+      }
+
+        scall(false)
+        socket.emit('end-call',uid)
+    }
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <ThemedView style={style.chat} >
-                <ThemedView style={[style.eventArea,{}]} darkColor="#151718">
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <ThemedView style={style.chat} >
+                    <ThemedView style={[style.eventArea,{}]} darkColor="#151718">
                         <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}>
                             <Ionicons name="arrow-back" size={28} color={borderColor} />
                         </TouchableOpacity>
-                    <ThemedInput value={titNam} onChangeText={stitNam} placeholder="don't be empty..." ref={title} editable={edit} style={{fontSize:21,flex:0.8}}/>
+                        <ThemedInput value={titNam} onChangeText={stitNam} placeholder="don't be empty..." ref={title} editable={edit} style={{fontSize:21,flex:0.8}}/>
                         <TouchableOpacity onPress={changeNam} style={{flex:0.1}}>
-
                             <Ionicons name={edit?"checkmark":"pencil"} size={28} color={borderColor} />
-
-                        
                         </TouchableOpacity>
-                </ThemedView>
-                <FlatList
-                    ref={flatlis}
-                    data={msgs}
-                    keyExtractor={(item,index) => item.yar+index}
-                    renderItem={({item})=><ThemedView style={[style.msg,yar!=item.yar?{alignSelf:"flex-end"}:{alignSelf:'flex-start'},{borderColor}]}>
-                        <ThemedText>{item.msg}</ThemedText>
-                    </ThemedView>}
-                    onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}
-                    onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
-                />
-                <ThemedView style={style.eventArea}>
-                    <ThemedView style={[style.textArea,{borderColor}]} >
-                        <ThemedInput style={style.inputfield} placeholder='Tyye...' value={txt} onChangeText={stxt} />
-
-                        <TouchableOpacity style={style.sendbtn} onPress={sendMsg} >
-                            <ThemedText>🏹</ThemedText>
+                        <TouchableOpacity style={{flex:0.1}} onPress={()=>stCall(true)}>
+                            <AntDesign name="videocamera" size={24} color={borderColor} />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={{flex:0.1}} onPress={stCall}>
+                            <AntDesign name="phone" size={24} color={borderColor} />
                         </TouchableOpacity>
                     </ThemedView>
+                    <FlatList
+                        ref={flatlis}
+                        data={msgs}
+                        keyExtractor={(item,index) => item.yar+index}
+                        renderItem={({item})=><ThemedView style={[style.msg,yar!=item.yar?{alignSelf:"flex-end"}:{alignSelf:'flex-start'},{borderColor}]}>
+                            <ThemedText>{item.msg}</ThemedText>
+                        </ThemedView>}
+                        onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}
+                        onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
+                    />
+                    <ThemedView style={style.eventArea}>
+                        <ThemedView style={[style.textArea,{borderColor}]} >
+                            <ThemedInput style={style.inputfield} placeholder='Tyye...' value={txt} onChangeText={stxt} />
+
+                            <TouchableOpacity style={style.sendbtn} onPress={sendMsg} >
+                                <ThemedText>🏹</ThemedText>
+                            </TouchableOpacity>
+                        </ThemedView>
+                    </ThemedView>
+                    <Modal visible={call} onRequestClose={()=>scall(false)}transparent={true}>
+                        <ThemedView style={style.chat}>
+                            {localStream && (
+                                <RTCView
+                                    streamURL={localStream.toURL()}
+                                    style={{ width: '100%', height: 200 }}
+                                    objectFit="cover"
+                                />
+                            )}
+                            {remoteStream && (
+                                <RTCView
+                                    streamURL={remoteStream.toURL()}
+                                    style={{ width: '100%', height: 200 }}
+                                    objectFit="cover"
+                                />
+                            )}
+                            <TouchableOpacity onPress={enCall} >
+                            <AntDesign name="closecircleo" size={28} color={borderColor} />
+                            </TouchableOpacity>
+                        </ThemedView>
+                    </Modal>
                 </ThemedView>
-            </ThemedView>
-        </TouchableWithoutFeedback>
+            </TouchableWithoutFeedback>
         </SafeAreaView>
     )
 }
