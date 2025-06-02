@@ -24,6 +24,8 @@ export default function HomeScreen() {
                 const granted = await ManageExternalStorage.checkAndGrantPermission();
                 if (granted) {
                     getFiles();
+                }else{
+                    
                 }
             } catch (err) {
                 console.error(err);
@@ -52,6 +54,7 @@ export default function HomeScreen() {
                     console.error(currentDir, err);
                 }
             }
+            files.length || files.push({path:"NA",name:"empty"}) 
             setfile(files)
 
         } catch (err) {

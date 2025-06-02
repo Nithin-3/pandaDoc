@@ -12,7 +12,7 @@ export const addChat = async (uid:string,msg:ChatMessage|null):Promise<boolean|n
     const {path,exist} = await pthEx(uid);
     try {
         if (exist) {
-            await FileSystem.writeAsStringAsync(path, JSON.stringify([msg??'']),{
+            await FileSystem.writeAsStringAsync(path, JSON.stringify([msg??{msg:"INIT",yar:"mid"}]),{
                 encoding: FileSystem.EncodingType.UTF8
             });
             return null;
@@ -48,7 +48,7 @@ export const rmChat = async(uid:string):Promise<boolean>=>{
     const {path,exist} = await pthEx(uid);
     try{
         if (exist) return false;
-        const data = await FileSystem.deleteAsync(path);
+        await FileSystem.deleteAsync(path);
         return true;
     }
     catch(err){

@@ -1,7 +1,6 @@
 import { useState, useEffect, useLayoutEffect } from "react";
 import { FlatList, TouchableOpacity, StyleSheet, Modal, Alert ,SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import uuid from "react-native-uuid";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedInput } from "@/components/ThemedInput";
@@ -11,7 +10,7 @@ import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
 import socket from '@/constants/Socket';
-import {addChat,readChat,rmChat} from '@/constants/file';
+import {addChat,rmChat} from '@/constants/file';
 const CONTACTS_KEY = "chat_contacts";
 
 const ChatContactsScreen = () => {
@@ -20,8 +19,7 @@ const ChatContactsScreen = () => {
         name: string;
         new?: number;
     }
-
-    const [contacts, setContacts] = useState<Contact[]>([]);
+    const [contacts, setContacts] = useState<Contact[] | null>(null);
     const [name, sname] = useState("");
     const [uid, suid] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
@@ -57,15 +55,26 @@ const ChatContactsScreen = () => {
     },[nav])
     useEffect(() => {
         (async()=>{
-      contacts.length && await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
-        sname("");
-        suid("");
-        setModalVisible(false);
+            contacts && await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+            sname("");
+            suid("");
+            setModalVisible(false);
         })();
     }, [contacts])
     useEffect(() => {
         socket.on('msg', async (msg) => {
-            await addChat(msg.yar,msg) ?? (suid(msg.yar),sname("unknown"),addContact());
+            if((await addChat(msg.yar,msg)) === null) {
+                console.log('in new');
+                const newContact = {
+                    id: msg.yar ,
+                    name: "unknown",
+                };
+                setContacts(p=>[newContact,...p]);
+            }else{
+                console.log('in push');
+                setContacts(p=>moveToFirst(p,msg.yar))
+            }
+            console.log(contacts);
         });
         return ()=>{
             socket.off("msg")
@@ -81,7 +90,6 @@ const ChatContactsScreen = () => {
         }
         return arr;
     }
-
     const loadContacts = async () => {
         try {
             const storedContacts = await AsyncStorage.getItem(CONTACTS_KEY);
@@ -112,17 +120,12 @@ const ChatContactsScreen = () => {
             id: uid ,
             name: name.trim(),
         };
-        const updatedContacts = [...contacts, newContact];
         addChat(uid,null);
-        setContacts(updatedContacts);
-
-        sname("");
-        suid("");
-        setModalVisible(false);
+        setContacts([newContact,...contacts]);
     };
     const deleteContact = async (contactId:String) => {
         const updatedContacts = contacts.filter((contact) => contact.id !== contactId);
-        rmChat(contactId) && setContacts(updatedContacts);
+        rmChat(contactId).then(()=>setContacts(updatedContacts))
     };
     const showDeleteAlert = (contactId:string) => {
         Alert.alert(
@@ -165,23 +168,23 @@ const ChatContactsScreen = () => {
                     <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={vis}>
 
                         <TouchableWithoutFeedback onPress={()=>{isKeyboardVisible?Keyboard.dismiss():vis()}}>
-                        <ThemedView style={styles.modalContainer}>
-                            <Pressable style={[styles.modalContent,{borderColor}]}>
-                                <ThemedText style={styles.modalTitle}>Add Contact</ThemedText>
+                            <ThemedView style={styles.modalContainer}>
+                                <Pressable style={[styles.modalContent,{borderColor}]}>
+                                    <ThemedText style={styles.modalTitle}>Add Contact</ThemedText>
 
-                                <ThemedInput placeholder="Enter contact name" style={styles.inp} value={name} onChangeText={sname}/>
-                                <ThemedInput placeholder="Enter UUID" style={styles.inp} value={uid} onChangeText={suid}/>
+                                    <ThemedInput placeholder="Enter contact name" style={styles.inp} value={name} onChangeText={sname}/>
+                                    <ThemedInput placeholder="Enter UUID" style={styles.inp} value={uid} onChangeText={suid}/>
 
-                                <ThemedView style={styles.modalButtons}>
-                                    <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={vis}>
-                                        <ThemedText>Cancel</ThemedText>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={addContact}>
-                                        <ThemedText>Save</ThemedText>
-                                    </TouchableOpacity>
-                                </ThemedView>
-                            </Pressable>
-                        </ThemedView>
+                                    <ThemedView style={styles.modalButtons}>
+                                        <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={vis}>
+                                            <ThemedText>Cancel</ThemedText>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={addContact}>
+                                            <ThemedText>Save</ThemedText>
+                                        </TouchableOpacity>
+                                    </ThemedView>
+                                </Pressable>
+                            </ThemedView>
                         </TouchableWithoutFeedback>
                     </Modal>
                 </ThemedView>

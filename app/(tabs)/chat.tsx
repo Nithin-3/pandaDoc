@@ -1,5 +1,5 @@
 import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal} from 'react-native'
-import { useEffect,useState,useRef,useLayoutEffect,useCallback} from "react";
+import { useEffect,useState,useRef,useLayoutEffect,} from "react";
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedInput } from '@/components/ThemedInput';
@@ -9,19 +9,18 @@ import socket from '@/constants/Socket';
 import {useRoute} from "@react-navigation/native"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from 'expo-file-system';
-import {Ionicons} from "@expo/vector-icons";
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,RTCView,mediaDevices,MediaStream} from "react-native-webrtc"
+import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,mediaDevices} from "react-native-webrtc"
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
-import {addChat,readChat,rmChat} from '@/constants/file';
+import {addChat,readChat,} from '@/constants/file';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
     nam: string;
 };
 const configuration = {
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 };
 
 export default function Chat() {
@@ -41,18 +40,19 @@ export default function Chat() {
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const nav = useNavigation();
 
-    const sendMsg = ()=>{
+    const sendMsg = async()=>{
         if(!txt.trim())return;
         socket.emit('chat',uid,{msg:txt.trim(),yar});
+        await addChat(uid,{msg:txt.trim(),yar}).catch(e=>{console.log(`chat not added error occur ${e.message} \n`,e)})
         stxt('');
     }
     const changeNam = async ()=>{
         sedit((prevEdit) => {
-              if (prevEdit) {
+            if (prevEdit) {
                 AsyncStorage.getItem(CONTACTS_KEY).then((t) => JSON.parse(t||'[]')).then((c) =>c.map((v: { id: string; }) => (v.id == uid ? { ...v, name: titNam } : v))).then(async (C) => await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(C)));
 
             } else {
-               setTimeout(()=>title.current?.focus(),100)
+                setTimeout(()=>title.current?.focus(),100)
             }
             return !prevEdit;
         });
@@ -63,19 +63,13 @@ export default function Chat() {
         });
     },[nav])
     useEffect(() => {
-    AsyncStorage.getItem("uid").then(value => {
-            if (value !== null) {
-                syar(value);
-            } else {
-                syar('santhosh sivam B'); 
-            }
-        });
+        AsyncStorage.getItem("uid").then(syar);
         const path = `${FileSystem.documentDirectory}${uid}.nin`;
         const interval = setInterval(async () => {
             try {
                 const stats = await RNFS.stat(path);
                 if (stats.mtime && new Date(stats.mtime).getTime() > lstChng.current){
-            smgs(await readChat(uid));
+                    smgs(await readChat(uid));
                     lstChng.current = new Date(stats.mtime).getTime();
                 }
             } catch (e) {
@@ -86,13 +80,12 @@ export default function Chat() {
         return () => clearInterval(interval);
     }, []);
     useEffect(()=>{
-        (async ()=>smgs(await readChat(uid)))();
         socket.on('offer', async (offer) => {
             await peer.current.setRemoteDescription(new RTCSessionDescription(offer));
             const answer = await peer.current.createAnswer();
             await peer.current.setLocalDescription(answer);
             socket.emit('answer',uid, answer);
-            
+
         })
         socket.on('answer', async (answer) => {
             await peer.current.setRemoteDescription(new RTCSessionDescription(answer));
@@ -109,35 +102,23 @@ export default function Chat() {
         socket.on('end-call',()=>{
             enCall()
         })
-        socket.on('msg', async (msg) => {
-            addChat(msg.yar,msg) || console.log("chat not added")
-        });
         return ()=>{
             socket.off('offer');
             socket.off('answer');
             socket.off("candidate")
             socket.off('end-call');
-            socket.off('msg');
             peer.current?.close();
             localStream?.getTracks().forEach(track => track.stop());;
             remoteStream?.getTracks().forEach(track => track.stop());
         }
     },[]) 
-    function moveToFirst(arr: any[] , targetId: string) {
-        const index = arr.findIndex((item: { id: string; }) => item.id === targetId);
-        if (index > -1) {
-            const [item] = arr.splice(index, 1);
-            arr.unshift({...item,new:item.new?item.new+1:1});
-        }
-        return arr;
-    }
     const stCall= async(vid:boolean=false)=>{
         peer.current = new RTCPeerConnection(configuration);
         peer.current.onicecandidate = (event) => {
                 if (event.candidate) {
                       socket.emit('candidate', uid, event.candidate);
                     }
-                  };
+              };
         const stream = await mediaDevices.getUserMedia({audio:true,video:vid})
         setLocalStream(stream);
         stream.getTracks().forEach(track => peer.current?.addTrack(track, stream));
@@ -160,10 +141,10 @@ export default function Chat() {
         }
         if(peer.current){
             peer.current.onicecandidate = null;
-        peer.current.ontrack = null;
-        peer.current.close();
-        peer.current = null;
-      }
+                peer.current.ontrack = null;
+                peer.current.close();
+                peer.current = null;
+              }
 
         scall(false)
         socket.emit('end-call',uid)
@@ -174,11 +155,11 @@ export default function Chat() {
                 <ThemedView style={style.chat} >
                     <ThemedView style={[style.eventArea,{}]} darkColor="#151718">
                         <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}>
-                            <Ionicons name="arrow-back" size={28} color={borderColor} />
+                            <AntDesign name="arrowleft" size={28} color={borderColor} />
                         </TouchableOpacity>
                         <ThemedInput value={titNam} onChangeText={stitNam} placeholder="don't be empty..." ref={title} editable={edit} style={{fontSize:21,flex:0.8}}/>
                         <TouchableOpacity onPress={changeNam} style={{flex:0.1}}>
-                            <Ionicons name={edit?"checkmark":"pencil"} size={28} color={borderColor} />
+                            <AntDesign name={edit?"check":"edit"} size={28} color={borderColor} />
                         </TouchableOpacity>
                         <TouchableOpacity style={{flex:0.1}} onPress={()=>stCall(true)}>
                             <AntDesign name="videocamera" size={24} color={borderColor} />
@@ -190,9 +171,9 @@ export default function Chat() {
                     <FlatList
                         ref={flatlis}
                         data={msgs}
-                        keyExtractor={(item,index) => item.yar+index}
-                        renderItem={({item})=><ThemedView style={[style.msg,yar!=item.yar?{alignSelf:"flex-end"}:{alignSelf:'flex-start'},{borderColor}]}>
-                            <ThemedText>{item.msg}</ThemedText>
+                        keyExtractor={(item,index) => item?.yar+index}
+                        renderItem={({item})=><ThemedView style={[style.msg,yar!=item?.yar?{alignSelf:"flex-end"}:{alignSelf:'flex-start'},{borderColor}]}>
+                            <ThemedText>{item?.msg}</ThemedText>
                         </ThemedView>}
                         onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}
                         onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
@@ -206,24 +187,10 @@ export default function Chat() {
                             </TouchableOpacity>
                         </ThemedView>
                     </ThemedView>
-                    <Modal visible={call} onRequestClose={()=>scall(false)}transparent={true}>
+                    <Modal visible={call} onRequestClose={()=>scall(false)} transparent={true}>
                         <ThemedView style={style.chat}>
-                            {localStream && (
-                                <RTCView
-                                    streamURL={localStream.toURL()}
-                                    style={{ width: '100%', height: 200 }}
-                                    objectFit="cover"
-                                />
-                            )}
-                            {remoteStream && (
-                                <RTCView
-                                    streamURL={remoteStream.toURL()}
-                                    style={{ width: '100%', height: 200 }}
-                                    objectFit="cover"
-                                />
-                            )}
                             <TouchableOpacity onPress={enCall} >
-                            <AntDesign name="closecircleo" size={28} color={borderColor} />
+                                <AntDesign name="closecircleo" size={28} color={borderColor} />
                             </TouchableOpacity>
                         </ThemedView>
                     </Modal>
