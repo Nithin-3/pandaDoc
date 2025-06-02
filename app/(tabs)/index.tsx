@@ -1,38 +1,40 @@
 import { useEffect,useState } from 'react';
-import { StyleSheet, TouchableOpacity, FlatList} from 'react-native';
+import { StyleSheet, TouchableOpacity, FlatList,Modal} from 'react-native';
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from '@/components/ThemedText';
 import { useNavigation } from 'expo-router';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import RNFS from 'react-native-fs';
 import  ManageExternalStorage  from 'react-native-external-storage-permission';
-// import FileViewer from "react-native-file-viewer";
 export default function HomeScreen() {
     const nav = useNavigation();
     const [file, setfile] = useState<{ path: string; name: string }[]>([]);
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const [cht,sCht] = useState(false);
+    const [vis,svis] = useState(false);
     useEffect(() => {
         const unsubscribe = nav.addListener('focus', () => {
             sCht(false);
         });
         return unsubscribe;
     }, [nav]);
-    useEffect(() => {
-        (async () => {
-            try {
-                const granted = await ManageExternalStorage.checkAndGrantPermission();
-                if (granted) {
-                    getFiles();
-                }else{
-                    
-                }
-            } catch (err) {
-                console.error(err);
+    const reqPer = async () => {
+        try {
+            const granted = await ManageExternalStorage.checkAndGrantPermission();
+            if (granted) {
+                svis(false)
+                getFiles();
+            }else{
+                svis(true)
             }
-        })();
-    }, []);
+        } catch (err) {
+            console.error(err);
+        }
+    }
 
+    useEffect(() => {
+        reqPer()
+    }, []);
     const getFiles = async () => {
         try {
             const rootDir = RNFS.ExternalStorageDirectoryPath;
@@ -85,6 +87,21 @@ export default function HomeScreen() {
                     <ThemedText>Read all document it may take  some time...</ThemedText>
                 </ThemedView>
             }
+            <Modal animationType="fade" transparent={true} visible={vis}>
+                <ThemedView style={styles.loadSceen}>
+                    <ThemedView style={styles.allert}>
+                        <ThemedText>pandaPdf needs access to your storage to function properly. Please grant permission.</ThemedText>
+                        <ThemedView style={styles.buttonViw}>
+                            <TouchableOpacity style={[styles.lisTxt,{borderColor}]} onPress={reqPer}>
+                                <ThemedText>ok 👍</ThemedText>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.lisTxt,{borderColor}]} onPress={()=>svis(false)}>
+                                <ThemedText>cancel 👎</ThemedText>
+                            </TouchableOpacity>
+                        </ThemedView>
+                    </ThemedView>
+                </ThemedView>
+            </Modal>
         </ThemedView>
     );
 }
@@ -107,6 +124,16 @@ const styles = StyleSheet.create({
         borderWidth:1,
         width:'auto',
     },
-
+    allert : {
+        margin: 20,
+        borderRadius: 12,
+        padding: 20,
+        elevation: 5,
+        borderColor
+    },
+    buttonViw:{
+        flexDirection: 'row',    
+        justifyContent: 'space-between'
+    }
 });
 

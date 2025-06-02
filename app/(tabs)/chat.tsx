@@ -14,6 +14,7 @@ import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,mediaDevices} f
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,} from '@/constants/file';
+import PrivacySnapshot from 'react-native-privacy-snapshot';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
@@ -80,6 +81,7 @@ export default function Chat() {
         return () => clearInterval(interval);
     }, []);
     useEffect(()=>{
+        PrivacySnapshot.enabled(true);
         socket.on('offer', async (offer) => {
             await peer.current.setRemoteDescription(new RTCSessionDescription(offer));
             const answer = await peer.current.createAnswer();
@@ -103,6 +105,7 @@ export default function Chat() {
             enCall()
         })
         return ()=>{
+            PrivacySnapshot.enabled(false);
             socket.off('offer');
             socket.off('answer');
             socket.off("candidate")
