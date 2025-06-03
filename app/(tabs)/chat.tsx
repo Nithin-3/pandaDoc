@@ -101,9 +101,11 @@ export default function Chat() {
                 console.warn(er)
             }
         })
-        socket.on('end-call',()=>{
-            enCall()
+        socket.on('rq-call',vid=>{
+            setLocalStream((await mediaDevices.getUserMedia({audio:true,video:vid}));
+            scall(true)
         })
+        socket.on('end-call',enPeer)
         return ()=>{
             ScreenCaptureSecure.disableSecure();
             socket.off('offer');
@@ -117,6 +119,7 @@ export default function Chat() {
     },[]) 
     const rqCall = async(vid:boolean=false)=>{
         setLocalStream((await mediaDevices.getUserMedia({audio:true,video:vid}));
+        socket.emit('rq-call',uid,vid)
         scall(true)
     }
     const stCall= async(vid:boolean)=>{
@@ -136,6 +139,11 @@ export default function Chat() {
         socket.emit('offer', uid, vid, offer);
     }
     const enCall = ()=>{
+        enPeer()
+        scall(false)
+        socket.emit('end-call',uid)
+    }
+    const enPeer = ()=>{
         if (localStream) {    
             localStream.getTracks().forEach(t=>t.stop())
             setLocalStream(null)
@@ -144,15 +152,12 @@ export default function Chat() {
             remoteStream.getTracks().forEach(t=>t.stop())
             setRemoteStream(null)
         }
-        if(peer.current){
+        if(peer.current) {
             peer.current.onicecandidate = null;
-                peer.current.ontrack = null;
-                peer.current.close();
-                peer.current = null;
-              }
-
-        scall(false)
-        socket.emit('end-call',uid)
+            peer.current.ontrack = null;
+            peer.current.close();
+            peer.current = null;
+        }
     }
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
@@ -194,11 +199,13 @@ export default function Chat() {
                     </ThemedView>
                     <Modal visible={call} onRequestClose={()=>scall(false)} transparent={true}>
                         <ThemedView style={style.chat}>
-                            {localStream && (<RTCView streamURL={localStream.toURL()} objectFit='cover' mirror style={{height:200,width:"100%"}}/>)}
-                            {remoteStream && (<RTCView streamURL={remoteStream.toURL()} objectFit='cover' mirror style={{height:200,width:"100%"}}/>)}
+                            {localStream && (<RTCView streamURL={localStream.toURL()} objectFit='cover' mirror style={{height:'45%',width:"100%"}}/>)}
+                            {remoteStream && (<RTCView streamURL={remoteStream.toURL()} objectFit='cover' mirror style={{height:'45%',width:"100%"}}/>)}
+                            <ThemedView style={[style.eventArea,{height:'10%'}]}>
                             <TouchableOpacity onPress={enCall} >
-                                <AntDesign name="closecircleo" size={28} color={borderColor} />
+                                <AntDesign name="call-end" size={28} color={borderColor} />
                             </TouchableOpacity>
+                            </ThemedView>
                         </ThemedView>
                     </Modal>
                 </ThemedView>
