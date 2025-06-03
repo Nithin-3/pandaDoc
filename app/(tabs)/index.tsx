@@ -89,7 +89,7 @@ export default function HomeScreen() {
             }
             <Modal animationType="fade" transparent={true} visible={vis}>
                 <ThemedView style={styles.loadSceen}>
-                    <ThemedView style={styles.allert}>
+                    <ThemedView style={[styles.allert,{borderColor}]}>
                         <ThemedText>pandaPdf needs access to your storage to function properly. Please grant permission.</ThemedText>
                         <ThemedView style={styles.buttonViw}>
                             <TouchableOpacity style={[styles.lisTxt,{borderColor}]} onPress={reqPer}>
@@ -129,7 +129,6 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         padding: 20,
         elevation: 5,
-        borderColor
     },
     buttonViw:{
         flexDirection: 'row',    

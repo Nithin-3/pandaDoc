@@ -34,11 +34,11 @@ const ChatContactsScreen = () => {
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
     useEffect(() => {
-        PrivacySnapshot.enabled(true);
+        // PrivacySnapshot.enabled(true);
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
         const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {setIsKeyboardVisible(false);});
         return () => {
-            PrivacySnapshot.enabled(false);
+            // PrivacySnapshot.enabled(false);
             showSubscription.remove();
             hideSubscription.remove();
         };
@@ -164,15 +164,12 @@ const ChatContactsScreen = () => {
                     </TouchableOpacity>
                     <FlatList data={contacts} keyExtractor={(item) => item.id} renderItem={renderSwipeableContact}/>
                     <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={vis}>
-
                         <TouchableWithoutFeedback onPress={()=>{isKeyboardVisible?Keyboard.dismiss():vis()}}>
                             <ThemedView style={styles.modalContainer}>
                                 <Pressable style={[styles.modalContent,{borderColor}]}>
                                     <ThemedText style={styles.modalTitle}>Add Contact</ThemedText>
-
                                     <ThemedInput placeholder="Enter contact name" style={styles.inp} value={name} onChangeText={sname}/>
                                     <ThemedInput placeholder="Enter UUID" style={styles.inp} value={uid} onChangeText={suid}/>
-
                                     <ThemedView style={styles.modalButtons}>
                                         <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={vis}>
                                             <ThemedText>Cancel</ThemedText>

@@ -10,7 +10,7 @@ import {useRoute} from "@react-navigation/native"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from 'expo-file-system';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,mediaDevices} from "react-native-webrtc"
+import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,mediaDevices, RTCView} from "react-native-webrtc"
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,} from '@/constants/file';
@@ -82,21 +82,21 @@ export default function Chat() {
     }, []);
     useEffect(()=>{
         PrivacySnapshot.enabled(true);
-        socket.on('offer', async (offer) => {
-            await peer.current.setRemoteDescription(new RTCSessionDescription(offer));
-            const answer = await peer.current.createAnswer();
-            await peer.current.setLocalDescription(answer);
+        socket.on('offer', async (vid, offer) => {
+            await peer.current?.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await peer.current?.createAnswer();
+            await peer.current?.setLocalDescription(answer);
             socket.emit('answer',uid, answer);
 
         })
         socket.on('answer', async (answer) => {
-            await peer.current.setRemoteDescription(new RTCSessionDescription(answer));
+            await peer.current?.setRemoteDescription(new RTCSessionDescription(answer));
 
 
         })
         socket.on('candidate', async (candidate) => {
             try{
-                await peer.current.addIceCandidate(new RTCIceCandidate(candidate))
+                await peer.current?.addIceCandidate(new RTCIceCandidate(candidate))
             }catch(er){
                 console.warn(er)
             }
@@ -115,23 +115,25 @@ export default function Chat() {
             remoteStream?.getTracks().forEach(track => track.stop());
         }
     },[]) 
-    const stCall= async(vid:boolean=false)=>{
+    const rqCall = async(vid:boolean=false)=>{
+        setLocalStream((await mediaDevices.getUserMedia({audio:true,video:vid}));
+        scall(true)
+    }
+    const stCall= async(vid:boolean)=>{
         peer.current = new RTCPeerConnection(configuration);
         peer.current.onicecandidate = (event) => {
                 if (event.candidate) {
                       socket.emit('candidate', uid, event.candidate);
                     }
               };
-        const stream = await mediaDevices.getUserMedia({audio:true,video:vid})
-        setLocalStream(stream);
-        stream.getTracks().forEach(track => peer.current?.addTrack(track, stream));
+        localStream.getTracks().forEach(track => peer.current?.addTrack(track, localStream));
         peer.current.ontrack = (event) => {
             setRemoteStream(event.streams[0]);
         }
         scall(true)
         const offer = await peer.current?.createOffer();
         await peer.current?.setLocalDescription(offer);
-        socket.emit('offer', uid, offer);
+        socket.emit('offer', uid, vid, offer);
     }
     const enCall = ()=>{
         if (localStream) {    
@@ -164,10 +166,10 @@ export default function Chat() {
                         <TouchableOpacity onPress={changeNam} style={{flex:0.1}}>
                             <AntDesign name={edit?"check":"edit"} size={28} color={borderColor} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={{flex:0.1}} onPress={()=>stCall(true)}>
+                        <TouchableOpacity style={{flex:0.1}} onPress={()=>rqCall(true)}>
                             <AntDesign name="videocamera" size={24} color={borderColor} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={{flex:0.1}} onPress={stCall}>
+                        <TouchableOpacity style={{flex:0.1}} onPress={rqCall}>
                             <AntDesign name="phone" size={24} color={borderColor} />
                         </TouchableOpacity>
                     </ThemedView>
@@ -192,6 +194,8 @@ export default function Chat() {
                     </ThemedView>
                     <Modal visible={call} onRequestClose={()=>scall(false)} transparent={true}>
                         <ThemedView style={style.chat}>
+                            {localStream && (<RTCView streamURL={localStream.toURL()} objectFit='cover' mirror style={{height:200,width:"100%"}}/>)}
+                            {remoteStream && (<RTCView streamURL={remoteStream.toURL()} objectFit='cover' mirror style={{height:200,width:"100%"}}/>)}
                             <TouchableOpacity onPress={enCall} >
                                 <AntDesign name="closecircleo" size={28} color={borderColor} />
                             </TouchableOpacity>
