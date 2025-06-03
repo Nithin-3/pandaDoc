@@ -11,7 +11,7 @@ import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
 import socket from '@/constants/Socket';
 import {addChat,rmChat} from '@/constants/file';
-import PrivacySnapshot from 'react-native-privacy-snapshot';
+import ScreenCaptureSecure from 'react-native-screen-capture-secure';
 const CONTACTS_KEY = "chat_contacts";
 
 const ChatContactsScreen = () => {
@@ -34,11 +34,11 @@ const ChatContactsScreen = () => {
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
     useEffect(() => {
-        // PrivacySnapshot.enabled(true);
+        ScreenCaptureSecure.enableSecure();
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
         const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {setIsKeyboardVisible(false);});
         return () => {
-            // PrivacySnapshot.enabled(false);
+            ScreenCaptureSecure.disableSecure();
             showSubscription.remove();
             hideSubscription.remove();
         };
