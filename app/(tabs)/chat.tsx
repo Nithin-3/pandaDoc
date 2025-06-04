@@ -33,7 +33,7 @@ export default function Chat() {
     const [titNam,stitNam] = useState(nam);
     const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
     const [edit,sedit] = useState(false);
-    const [call,scall] = useState(true);
+    const [call,scall] = useState(false);
     const lstChng = useRef<number>(0);
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
@@ -119,8 +119,8 @@ export default function Chat() {
         }
     },[]) 
     const rqCall = async(vid:boolean=false)=>{
-        scall(true)
         setLocalStream((await mediaDevices.getUserMedia({audio:true,video:vid})));
+        scall(true)
         socket.emit('rq-call',uid,vid)
     }
     const stCall= async(vid:boolean)=>{
