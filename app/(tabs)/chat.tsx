@@ -51,7 +51,6 @@ export default function Chat() {
         sedit((prevEdit) => {
             if (prevEdit) {
                 AsyncStorage.getItem(CONTACTS_KEY).then((t) => JSON.parse(t||'[]')).then((c) =>c.map((v: { id: string; }) => (v.id == uid ? { ...v, name: titNam } : v))).then(async (C) => await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(C)));
-
             } else {
                 setTimeout(()=>title.current?.focus(),100)
             }
@@ -203,9 +202,9 @@ export default function Chat() {
                             {localStream && (<RTCView streamURL={localStream.toURL()} objectFit='cover' mirror style={{height:'45%',width:"100%"}}/>)}
                             {remoteStream && (<RTCView streamURL={remoteStream.toURL()} objectFit='cover' mirror style={{height:'45%',width:"100%"}}/>)}
                             <ThemedView style={[style.eventArea,{height:'10%'}]}>
-                            <TouchableOpacity onPress={enCall} >
-                                <AntDesign name="call-end" size={28} color={borderColor} />
-                            </TouchableOpacity>
+                                <TouchableOpacity onPress={enCall} >
+                                    <AntDesign name="call-end" size={28} color={borderColor} />
+                                </TouchableOpacity>
                             </ThemedView>
                         </ThemedView>
                     </Modal>
