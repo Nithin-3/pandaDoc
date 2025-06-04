@@ -10,6 +10,7 @@ import {useRoute} from "@react-navigation/native"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from 'expo-file-system';
 import AntDesign from '@expo/vector-icons/AntDesign';
+import {MaterialIcons} from '@expo/vector-icons/';
 import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,mediaDevices, RTCView} from "react-native-webrtc"
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
@@ -32,7 +33,7 @@ export default function Chat() {
     const [titNam,stitNam] = useState(nam);
     const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
     const [edit,sedit] = useState(false);
-    const [call,scall] = useState(false);
+    const [call,scall] = useState(true);
     const lstChng = useRef<number>(0);
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
@@ -118,9 +119,9 @@ export default function Chat() {
         }
     },[]) 
     const rqCall = async(vid:boolean=false)=>{
+        scall(true)
         setLocalStream((await mediaDevices.getUserMedia({audio:true,video:vid})));
         socket.emit('rq-call',uid,vid)
-        scall(true)
     }
     const stCall= async(vid:boolean)=>{
         peer.current = new RTCPeerConnection(configuration);
@@ -203,7 +204,7 @@ export default function Chat() {
                             {remoteStream && (<RTCView streamURL={remoteStream.toURL()} objectFit='cover' mirror style={{height:'45%',width:"100%"}}/>)}
                             <ThemedView style={[style.eventArea,{height:'10%'}]}>
                                 <TouchableOpacity onPress={enCall} >
-                                    <AntDesign name="call-end" size={28} color={borderColor} />
+                                    <MaterialIcons name="call-end" size={24} color={borderColor}/>
                                 </TouchableOpacity>
                             </ThemedView>
                         </ThemedView>
