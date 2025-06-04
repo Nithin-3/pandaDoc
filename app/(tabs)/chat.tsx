@@ -130,7 +130,7 @@ export default function Chat() {
                       socket.emit('candidate', uid, event.candidate);
                     }
               };
-        localStream.getTracks().forEach(track => peer.current?.addTrack(track, localStream));
+        localStream?.getTracks().forEach(track => peer.current?.addTrack(track, localStream));
         peer.current.ontrack = (event) => {
             setRemoteStream(event.streams[0]);
         }
