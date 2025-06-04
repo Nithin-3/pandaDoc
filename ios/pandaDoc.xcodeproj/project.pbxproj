@@ -14,7 +14,7 @@
 		96905EF65AED1B983A6B3ABC /* libPods-pandaDoc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 58EEBF8E8E6FB1BC6CAF49B5 /* libPods-pandaDoc.a */; };
 		B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		A032F1B1F745473387EA2082 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2F66D9098EC464E94210AC5 /* noop-file.swift */; };
+		0C58EB0B4ABB49B68FFB7977 /* noop-file.swift in Sources */ = {isa = PBXBuildFile; fileRef = 895BE38DE452430BB65677CB /* noop-file.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,8 +31,8 @@
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		FAC715A2D49A985799AEE119 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-pandaDoc/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		C2F66D9098EC464E94210AC5 /* noop-file.swift */ = {isa = PBXFileReference; name = "noop-file.swift"; path = "pandaDoc/noop-file.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
-		18742AA8C23C4414B911FF9D /* pandaDoc-Bridging-Header.h */ = {isa = PBXFileReference; name = "pandaDoc-Bridging-Header.h"; path = "pandaDoc/pandaDoc-Bridging-Header.h"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; explicitFileType = undefined; includeInIndex = 0; };
+		895BE38DE452430BB65677CB /* noop-file.swift */ = {isa = PBXFileReference; name = "noop-file.swift"; path = "pandaDoc/noop-file.swift"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.swift; explicitFileType = undefined; includeInIndex = 0; };
+		1E5E34691F6A469396CC17FB /* pandaDoc-Bridging-Header.h */ = {isa = PBXFileReference; name = "pandaDoc-Bridging-Header.h"; path = "pandaDoc/pandaDoc-Bridging-Header.h"; sourceTree = "<group>"; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,8 +57,8 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				13B07FB71A68108700A75B9A /* main.m */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				C2F66D9098EC464E94210AC5 /* noop-file.swift */,
-				18742AA8C23C4414B911FF9D /* pandaDoc-Bridging-Header.h */,
+				895BE38DE452430BB65677CB /* noop-file.swift */,
+				1E5E34691F6A469396CC17FB /* pandaDoc-Bridging-Header.h */,
 			);
 			name = pandaDoc;
 			sourceTree = "<group>";
@@ -198,7 +198,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				F60FC6B2B3F94ACF969E1E5D /* pandaDoc-Bridging-Header.h in Resources */,
+				0D2D05AF911B4D91A190CD8B /* pandaDoc-Bridging-Header.h in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -274,7 +274,7 @@
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
 				B18059E884C0ABDD17F3DC3D /* ExpoModulesProvider.swift in Sources */,
-				A032F1B1F745473387EA2082 /* noop-file.swift in Sources */,
+				0C58EB0B4ABB49B68FFB7977 /* noop-file.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

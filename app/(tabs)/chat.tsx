@@ -14,7 +14,7 @@ import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,mediaDevices, R
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,} from '@/constants/file';
-import ScreenCaptureSecure from 'react-native-screen-capture-secure';
+import * as ScreenCapture from 'expo-screen-capture';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
@@ -81,7 +81,7 @@ export default function Chat() {
         return () => clearInterval(interval);
     }, []);
     useEffect(()=>{
-        ScreenCaptureSecure.enableSecure();
+        ScreenCapture.preventScreenCaptureAsync();
         socket.on('offer', async (vid, offer) => {
             await peer.current?.setRemoteDescription(new RTCSessionDescription(offer));
             const answer = await peer.current?.createAnswer();
@@ -101,13 +101,14 @@ export default function Chat() {
                 console.warn(er)
             }
         })
-        socket.on('rq-call',vid=>{
-            setLocalStream((await mediaDevices.getUserMedia({audio:true,video:vid}));
+        socket.on('rq-call',async(vid)=>{
+            const ste = await mediaDevices.getUserMedia({audio:true,video:vid})
+            setLocalStream(ste);
             scall(true)
         })
         socket.on('end-call',enPeer)
         return ()=>{
-            ScreenCaptureSecure.disableSecure();
+            ScreenCapture.allowScreenCaptureAsync();
             socket.off('offer');
             socket.off('answer');
             socket.off("candidate")
@@ -118,7 +119,7 @@ export default function Chat() {
         }
     },[]) 
     const rqCall = async(vid:boolean=false)=>{
-        setLocalStream((await mediaDevices.getUserMedia({audio:true,video:vid}));
+        setLocalStream((await mediaDevices.getUserMedia({audio:true,video:vid})));
         socket.emit('rq-call',uid,vid)
         scall(true)
     }
