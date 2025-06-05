@@ -11,10 +11,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from 'expo-file-system';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import {MaterialIcons} from '@expo/vector-icons/';
-import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,mediaDevices, RTCView} from "react-native-webrtc"
+// import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,mediaDevices, RTCView,MediaStream} from "react-native-webrtc"
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,} from '@/constants/file';
+import {P2P} from '@/constants/webrtc';
 import * as ScreenCapture from 'expo-screen-capture';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
@@ -34,30 +35,16 @@ export default function Chat() {
     const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
     const [edit,sedit] = useState(false);
     const [call,scall] = useState(false);
+    const [flip,sflip] = useState(false);
+    const [downCall,sdownCall] = useState(false);
+    const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const lstChng = useRef<number>(0);
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
-    const peer = useRef<RTCPeerConnection | null>(null);
-    const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-    const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+    const peer = useRef<P2P | null>(null);
     const nav = useNavigation();
 
-    const sendMsg = async()=>{
-        if(!txt.trim())return;
-        socket.emit('chat',uid,{msg:txt.trim(),yar});
-        await addChat(uid,{msg:txt.trim(),yar}).catch(e=>{console.log(`chat not added error occur ${e.message} \n`,e)})
-        stxt('');
-    }
-    const changeNam = async ()=>{
-        sedit((prevEdit) => {
-            if (prevEdit) {
-                AsyncStorage.getItem(CONTACTS_KEY).then((t) => JSON.parse(t||'[]')).then((c) =>c.map((v: { id: string; }) => (v.id == uid ? { ...v, name: titNam } : v))).then(async (C) => await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(C)));
-            } else {
-                setTimeout(()=>title.current?.focus(),100)
-            }
-            return !prevEdit;
-        });
-    }
     useLayoutEffect(()=>{
         nav.setOptions({
             headerShown: false,
@@ -82,31 +69,41 @@ export default function Chat() {
     }, []);
     useEffect(()=>{
         ScreenCapture.preventScreenCaptureAsync();
-        socket.on('offer', async (vid, offer) => {
-            await peer.current?.setRemoteDescription(new RTCSessionDescription(offer));
-            const answer = await peer.current?.createAnswer();
-            await peer.current?.setLocalDescription(answer);
+        peer.current = new P2P({
+            onRemStrm:setRemoteStream,
+            onICE:(candidate)=>{
+                socket.emit('candidate', uid, candidate);
+            },
+
+        })
+        socket.on('offer', async (offer) => {
+            peer.current?.setRemDisc(offer)
+            const answer = await peer.current?.crAns();
             socket.emit('answer',uid, answer);
 
         })
         socket.on('answer', async (answer) => {
-            await peer.current?.setRemoteDescription(new RTCSessionDescription(answer));
+            await peer.current?.setRemDisc(answer);
 
 
         })
         socket.on('candidate', async (candidate) => {
             try{
-                await peer.current?.addIceCandidate(new RTCIceCandidate(candidate))
+                await peer.current?.addICE(candidate);
             }catch(er){
                 console.warn(er)
             }
         })
         socket.on('rq-call',async(vid)=>{
-            const ste = await mediaDevices.getUserMedia({audio:true,video:vid})
-            setLocalStream(ste);
+            setLocalStream((await mediaDevices.getUserMedia({audio:true,video:vid})));
+            sdownCall(true)
             scall(true)
         })
-        socket.on('end-call',enPeer)
+        socket.on('end-call',()=>{
+            setLocalStream(null);
+            setRemoteStream(null);
+            peer.current.clean()
+        })
         return ()=>{
             ScreenCapture.allowScreenCaptureAsync();
             socket.off('offer');
@@ -119,46 +116,55 @@ export default function Chat() {
         }
     },[]) 
     const rqCall = async(vid:boolean=false)=>{
-        setLocalStream((await mediaDevices.getUserMedia({audio:true,video:vid})));
+        setLocalStream((await peer.current?.stStrm(vid)));
         scall(true)
         socket.emit('rq-call',uid,vid)
     }
-    const stCall= async(vid:boolean)=>{
-        peer.current = new RTCPeerConnection(configuration);
-        peer.current.onicecandidate = (event) => {
-                if (event.candidate) {
-                      socket.emit('candidate', uid, event.candidate);
-                    }
-              };
-        localStream?.getTracks().forEach(track => peer.current?.addTrack(track, localStream));
-        peer.current.ontrack = (event) => {
-            setRemoteStream(event.streams[0]);
-        }
-        scall(true)
-        const offer = await peer.current?.createOffer();
-        await peer.current?.setLocalDescription(offer);
-        socket.emit('offer', uid, vid, offer);
+    const stCall= async()=>{
+        peer.current?.initPeer()
+        const offer = await peer.current?.crOff();
+        socket.emit('offer', uid, offer);
     }
     const enCall = ()=>{
-        enPeer()
+        peer.current?.clean()
         scall(false)
         socket.emit('end-call',uid)
     }
-    const enPeer = ()=>{
-        if (localStream) {    
-            localStream.getTracks().forEach(t=>t.stop())
-            setLocalStream(null)
+    const flipCamera = async () => {
+        if (!peer.current) return;
+        const crnt = peer.current.getLocStrm();
+        if (!crnt) return;
+        const crntTrk = crnt.getVideoTracks()[0];
+        if (crntTrk && typeof crntTrk._switchCamera === 'function'){
+            crntTrk._switchCamera();
         }
-        if (remoteStream) {    
-            remoteStream.getTracks().forEach(t=>t.stop())
-            setRemoteStream(null)
+        else{
+
+            console.log('flipCamera: switching by restarting stream');
+            crnt.getTracks().forEach(track => track.stop());
+            const newStrm = await peer.current.stStrm({ facingMode: flip?"user":"environment" });
+            const nuuTrk = newStrm.getVideoTracks()[0]
+            nuuTrk && await peer.current.replaceVid(nuuTrk)
         }
-        if(peer.current) {
-            peer.current.onicecandidate = null;
-            peer.current.ontrack = null;
-            peer.current.close();
-            peer.current = null;
-        }
+        setLocalStream((await peer.current?.getLocStrm()))
+        sflip(p=>!p)
+    };
+    
+    const sendMsg = async()=>{
+        if(!txt.trim())return;
+        socket.emit('chat',uid,{msg:txt.trim(),yar});
+        await addChat(uid,{msg:txt.trim(),yar}).catch(e=>{console.log(`chat not added error occur ${e.message} \n`,e)})
+        stxt('');
+    }
+    const changeNam = async ()=>{
+        sedit((prevEdit) => {
+            if (prevEdit) {
+                AsyncStorage.getItem(CONTACTS_KEY).then((t) => JSON.parse(t||'[]')).then((c) =>c.map((v: { id: string; }) => (v.id == uid ? { ...v, name: titNam } : v))).then(async (C) => await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(C)));
+            } else {
+                setTimeout(()=>title.current?.focus(),100)
+            }
+            return !prevEdit;
+        });
     }
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
@@ -175,7 +181,7 @@ export default function Chat() {
                         <TouchableOpacity style={{flex:0.1}} onPress={()=>rqCall(true)}>
                             <AntDesign name="videocamera" size={24} color={borderColor} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={{flex:0.1}} onPress={rqCall}>
+                        <TouchableOpacity style={{flex:0.1}} onPress={()=>rqCall(false)}>
                             <AntDesign name="phone" size={24} color={borderColor} />
                         </TouchableOpacity>
                     </ThemedView>
@@ -194,7 +200,7 @@ export default function Chat() {
                             <ThemedInput style={style.inputfield} placeholder='Tyye...' value={txt} onChangeText={stxt} />
 
                             <TouchableOpacity style={style.sendbtn} onPress={sendMsg} >
-                                <ThemedText>🏹</ThemedText>
+                                    <MaterialIcons name="send" size={24} color={borderColor}/>
                             </TouchableOpacity>
                         </ThemedView>
                     </ThemedView>
@@ -202,9 +208,15 @@ export default function Chat() {
                         <ThemedView style={style.chat}>
                             {localStream && (<RTCView streamURL={localStream.toURL()} objectFit='cover' mirror style={{height:'45%',width:"100%"}}/>)}
                             {remoteStream && (<RTCView streamURL={remoteStream.toURL()} objectFit='cover' mirror style={{height:'45%',width:"100%"}}/>)}
-                            <ThemedView style={[style.eventArea,{height:'10%'}]}>
-                                <TouchableOpacity onPress={enCall} >
-                                    <MaterialIcons name="call-end" size={24} color={borderColor}/>
+                            <ThemedView style={style.calBtn}>
+                                <TouchableOpacity onPress={null} >
+                                    <MaterialIcons name="volume-up" size={35} color={borderColor}/>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={downCall?stCall:enCall} >
+                                    <MaterialIcons name={downCall?"call":"call-end"} size={35} color={borderColor}/>
+                                </TouchableOpacity>
+                                <TouchableOpacity onPress={flipCamera} >
+                                    <MaterialIcons name="flip" size={35} color={borderColor}/>
                                 </TouchableOpacity>
                             </ThemedView>
                         </ThemedView>
@@ -252,5 +264,16 @@ const style = StyleSheet.create({
         padding:7,
         borderRadius:15,
         borderWidth:1,
+    },
+    calBtn:{
+        height:'10%',
+        width:'100%',
+        position:'absolute',
+        bottom:0,
+        flexDirection:'row',
+        alignItems:'center',
+        justifyContent:'space-around',
+        borderWidth:1,
+        borderColor:"#fff"
     }
 })
