@@ -11,7 +11,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as FileSystem from 'expo-file-system';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import {MaterialIcons} from '@expo/vector-icons/';
-// import { RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,mediaDevices, RTCView,MediaStream} from "react-native-webrtc"
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,} from '@/constants/file';
@@ -21,9 +20,6 @@ const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
     nam: string;
-};
-const configuration = {
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 };
 
 export default function Chat() {
@@ -36,6 +32,8 @@ export default function Chat() {
     const [edit,sedit] = useState(false);
     const [call,scall] = useState(false);
     const [flip,sflip] = useState(false);
+    const [remAud,sremAud] = useState(true);
+    const [locAud,slocAud] = useState(true);
     const [downCall,sdownCall] = useState(false);
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -74,6 +72,9 @@ export default function Chat() {
             onICE:(candidate)=>{
                 socket.emit('candidate', uid, candidate);
             },
+            onDatClose:()=>{
+                peer.current?.clean()
+            }
 
         })
         socket.on('offer', async (offer) => {
@@ -150,6 +151,13 @@ export default function Chat() {
         sflip(p=>!p)
     };
     
+    const audioOut = (stream: MediaStream|null,set: Function) => {
+        stream?.getAudioTracks().forEach(track => {
+            set(!track.enabled)
+            track.enabled = !track.enabled;
+        });
+    };
+
     const sendMsg = async()=>{
         if(!txt.trim())return;
         socket.emit('chat',uid,{msg:txt.trim(),yar});
@@ -209,14 +217,14 @@ export default function Chat() {
                             {localStream && (<RTCView streamURL={localStream.toURL()} objectFit='cover' mirror style={{height:'45%',width:"100%"}}/>)}
                             {remoteStream && (<RTCView streamURL={remoteStream.toURL()} objectFit='cover' mirror style={{height:'45%',width:"100%"}}/>)}
                             <ThemedView style={style.calBtn}>
-                                <TouchableOpacity onPress={null} >
-                                    <MaterialIcons name="volume-up" size={35} color={borderColor}/>
+                                <TouchableOpacity onPress={() => audioOut(remoteStream, sremAud)} >
+                                    <MaterialIcons name={remAud?"volume-up":"volume-off"} size={35} color={borderColor}/>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={downCall?stCall:enCall} >
                                     <MaterialIcons name={downCall?"call":"call-end"} size={35} color={borderColor}/>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={flipCamera} >
-                                    <MaterialIcons name="flip" size={35} color={borderColor}/>
+                                    <MaterialIcons name="flip-camera-android" size={35} color={borderColor}/>
                                 </TouchableOpacity>
                             </ThemedView>
                         </ThemedView>
