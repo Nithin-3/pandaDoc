@@ -1,5 +1,5 @@
 import { useEffect,useState } from 'react';
-import { StyleSheet, TouchableOpacity, FlatList,Modal} from 'react-native';
+import { StyleSheet, TouchableOpacity, FlatList,Modal,Image} from 'react-native';
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from '@/components/ThemedText';
 import { useNavigation } from 'expo-router';
@@ -85,6 +85,9 @@ export default function HomeScreen() {
                 <ThemedView style={styles.loadSceen}>
                     <ThemedText>loading...</ThemedText>
                     <ThemedText>Read all document it may take  some time...</ThemedText>
+                    {
+                        // <Image resizeMode="contain" source={require('../../assets/images/read.gif')}/> 
+                    }
                 </ThemedView>
             }
             <Modal animationType="fade" transparent={true} visible={vis}>

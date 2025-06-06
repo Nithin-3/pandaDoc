@@ -32,7 +32,7 @@ export class P2P{
         return this.peer;
     }
 
-    async stStrm(video: boolean | MediaTrackConstraints = false){
+    async stStrm(video: boolean | MediaTrackConstraints){
         const strm = await mediaDevices.getUserMedia({audio:true,video})
         this.locStream = strm;
         return strm;

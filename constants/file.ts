@@ -1,9 +1,25 @@
 import * as FileSystem from 'expo-file-system';
+const CHUNK_SIZE = 1024 * 64;
+
+interface FileInfo {
+  uri: string;
+  name: string;
+  size: number;
+}
+interface ChunkMessage {
+  data: string;
+  index: number;
+  size: number;
+  name: string;
+}
+
+type SendFunction = (data: ChunkMessage) => Promise<void>;
+type writeFunction = (chunk:ChunkMessage,path:string) => Promise<string|boolean>;
 type ChatMessage = {
       msg: string;
       yar: string;
 };
-const pthEx = async (uid:string):Promise<{string,boolean}> => {
+const pthEx = async (uid:string):Promise<{path: string; exist: boolean}> => {
         const path = `${FileSystem.documentDirectory}${uid}.nin`;
         const fileInfo = await FileSystem.getInfoAsync(path);
         return { path, exist:!fileInfo.exists };
@@ -54,5 +70,50 @@ export const rmChat = async(uid:string):Promise<boolean>=>{
     catch(err){
         console.log("char not deleted\n",err)
         return false
+    }
+}
+export const splitSend = async(file:FileInfo,send:SendFunction):Promise<boolean>=>{
+    const {uri,name,size} = file;
+    const fileInfo = await FileSystem.getInfoAsync(uri);
+    if (!fileInfo.exists) return false;
+    const totalChunks = Math.ceil(size / CHUNK_SIZE);
+    for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, size);
+        try{
+            const chunk = await FileSystem.readAsStringAsync(uri, {encoding: FileSystem.EncodingType.Base64,position: start,length: end - start,});
+            await send({data: chunk,index: i,size:totalChunks,name: name,});
+        }catch(e){
+            return false;
+        }
+    }
+    return true;
+}
+export const addChunk = ():writeFunction=>{
+    const fileMap = new Map< number, string >();
+    let fsize = 0;
+    let fname = '';
+    return async(chunk:ChunkMessage,path:string):Promise<string|boolean>=>{
+        const {data,size,name,index} = chunk;
+        fileMap.set(index,data);
+        fsize = size;
+        fname = name;
+        if( fileMap.size === fsize ){
+          const order:string[] = [];
+            for(let i=0;i<fsize;i++){
+                const packet = fileMap.get(i);
+                if(!packet) return false;
+                order.push(packet);
+            }
+            const base64 = order.join('');
+            try {
+                await FileSystem.writeAsStringAsync(`${path}${fname}`, base64, {encoding: FileSystem.EncodingType.Base64,});
+                fileMap.clear();
+                return `${path}${fname}`;
+            } catch (err) {
+                return false;
+            }
+        }
+        return true;
     }
 }

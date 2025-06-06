@@ -34,11 +34,9 @@ const ChatContactsScreen = () => {
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
     useEffect(() => {
-        ScreenCapture.preventScreenCaptureAsync();
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
         const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {setIsKeyboardVisible(false);});
         return () => {
-            ScreenCapture.allowScreenCaptureAsync();
             showSubscription.remove();
             hideSubscription.remove();
         };
@@ -49,6 +47,7 @@ const ChatContactsScreen = () => {
         });
         return nav.addListener('focus', () => {
             loadContacts();
+        ScreenCapture.preventScreenCaptureAsync();
         })
     },[nav])
     useEffect(() => {
@@ -75,6 +74,7 @@ const ChatContactsScreen = () => {
             console.log(contacts);
         });
         return ()=>{
+            ScreenCapture.allowScreenCaptureAsync();
             socket.off("msg")
         }
     }, []);

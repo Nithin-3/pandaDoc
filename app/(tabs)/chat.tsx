@@ -17,6 +17,7 @@ import {addChat,readChat,} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import {RTCView} from "react-native-webrtc"
 import * as ScreenCapture from 'expo-screen-capture';
+// import * as DocumentPicker from 'expo-document-picker';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
@@ -96,14 +97,16 @@ export default function Chat() {
                 console.warn(er)
             }
         })
-        socket.on('rq-call',async(vid)=>{
-            setLocalStream((await mediaDevices.getUserMedia({audio:true,video:vid})));
+        socket.on('rqcall',async(vid)=>{
+            setLocalStream((await peer.current?.stStrm(vid)));
+            scall(true)
             sdownCall(true)
             scall(true)
         })
-        socket.on('end-call',()=>{
+        socket.on('endcall',()=>{
             setLocalStream(null);
             setRemoteStream(null);
+            scall(false)
             peer.current.clean()
         })
         return ()=>{
@@ -111,7 +114,7 @@ export default function Chat() {
             socket.off('offer');
             socket.off('answer');
             socket.off("candidate")
-            socket.off('end-call');
+            socket.off('endcall');
             peer.current?.close();
             localStream?.getTracks().forEach(track => track.stop());;
             remoteStream?.getTracks().forEach(track => track.stop());
@@ -120,17 +123,18 @@ export default function Chat() {
     const rqCall = async(vid:boolean=false)=>{
         setLocalStream((await peer.current?.stStrm(vid)));
         scall(true)
-        socket.emit('rq-call',uid,vid)
+        socket.emit('rqcall',uid,vid);
     }
     const stCall= async()=>{
         peer.current?.initPeer()
         const offer = await peer.current?.crOff();
+        sdownCall(false)
         socket.emit('offer', uid, offer);
     }
     const enCall = ()=>{
         peer.current?.clean()
         scall(false)
-        socket.emit('end-call',uid)
+        socket.emit('endcall',uid)
     }
     const flipCamera = async () => {
         if (!peer.current) return;
@@ -175,6 +179,26 @@ export default function Chat() {
             return !prevEdit;
         });
     }
+    // const pickMediaFiles = async () => {
+    //     try {
+    //         const result = await DocumentPicker.getDocumentAsync({
+    //             type: '*/*', 
+    //             multiple: true,
+    //             copyToCacheDirectory: true,
+    //         });
+    //         if (result && result.assets) {
+    //             for (let file of result.assets) {
+    //                 // Single file
+    //             }
+    //         } else if (result.type === 'success') {
+    //             console.log('Single File:', result);
+    //         } else {
+    //             console.log('Picker cancelled or failed.');
+    //         }
+    //     } catch (error) {
+    //         console.error('Error picking files:', error);
+    //     }
+    // };
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -184,13 +208,13 @@ export default function Chat() {
                             <AntDesign name="arrowleft" size={28} color={borderColor} />
                         </TouchableOpacity>
                         <ThemedInput value={titNam} onChangeText={stitNam} placeholder="don't be empty..." ref={title} editable={edit} style={{fontSize:21,flex:0.8}}/>
-                        <TouchableOpacity onPress={changeNam} style={{flex:0.1}}>
+                        <TouchableOpacity onPress={changeNam} style={{flex:0.1,marginHorizontal:3}}>
                             <AntDesign name={edit?"check":"edit"} size={28} color={borderColor} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={{flex:0.1}} onPress={()=>rqCall(true)}>
+                        <TouchableOpacity style={{flex:0.1,marginHorizontal:3}} onPress={()=>rqCall(true)}>
                             <AntDesign name="videocamera" size={24} color={borderColor} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={{flex:0.1}} onPress={()=>rqCall(false)}>
+                        <TouchableOpacity style={{flex:0.1,marginHorizontal:3}} onPress={()=>rqCall(false)}>
                             <AntDesign name="phone" size={24} color={borderColor} />
                         </TouchableOpacity>
                     </ThemedView>
@@ -208,6 +232,9 @@ export default function Chat() {
                         <ThemedView style={[style.textArea,{borderColor}]} >
                             <ThemedInput style={style.inputfield} placeholder='Tyye...' value={txt} onChangeText={stxt} />
 
+                            <TouchableOpacity style={style.sendbtn} onPress={sendMsg} >
+                                    <MaterialIcons name="attach-file" size={24} color={borderColor}/>
+                            </TouchableOpacity>
                             <TouchableOpacity style={style.sendbtn} onPress={sendMsg} >
                                     <MaterialIcons name="send" size={24} color={borderColor}/>
                             </TouchableOpacity>
