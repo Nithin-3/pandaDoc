@@ -15,6 +15,7 @@ import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
+import {RTCView} from "react-native-webrtc"
 import * as ScreenCapture from 'expo-screen-capture';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
@@ -31,7 +32,7 @@ export default function Chat() {
     const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
     const [edit,sedit] = useState(false);
     const [call,scall] = useState(false);
-    const [flip,sflip] = useState(false);
+    const [flip,sflip] = useState(true);
     const [remAud,sremAud] = useState(true);
     const [locAud,slocAud] = useState(true);
     const [downCall,sdownCall] = useState(false);
@@ -143,7 +144,7 @@ export default function Chat() {
 
             console.log('flipCamera: switching by restarting stream');
             crnt.getTracks().forEach(track => track.stop());
-            const newStrm = await peer.current.stStrm({ facingMode: flip?"user":"environment" });
+            const newStrm = await peer.current.stStrm({ facingMode: flip?"environment":"user" });
             const nuuTrk = newStrm.getVideoTracks()[0]
             nuuTrk && await peer.current.replaceVid(nuuTrk)
         }
@@ -214,8 +215,8 @@ export default function Chat() {
                     </ThemedView>
                     <Modal visible={call} onRequestClose={()=>scall(false)} transparent={true}>
                         <ThemedView style={style.chat}>
-                            {localStream && (<RTCView streamURL={localStream.toURL()} objectFit='cover' mirror style={{height:'45%',width:"100%"}}/>)}
-                            {remoteStream && (<RTCView streamURL={remoteStream.toURL()} objectFit='cover' mirror style={{height:'45%',width:"100%"}}/>)}
+                            {localStream && (<RTCView streamURL={localStream.toURL()} objectFit='cover' mirror={flip} style={{height:'45%',width:"100%"}}/>)}
+                            {remoteStream && (<RTCView streamURL={remoteStream.toURL()} objectFit='cover'  style={{height:'45%',width:"100%"}}/>)}
                             <ThemedView style={style.calBtn}>
                                 <TouchableOpacity onPress={() => audioOut(remoteStream, sremAud)} >
                                     <MaterialIcons name={remAud?"volume-up":"volume-off"} size={35} color={borderColor}/>
