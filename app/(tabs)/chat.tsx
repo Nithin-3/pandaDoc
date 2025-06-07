@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal} from 'react-native'
+import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal, Image, Dimensions} from 'react-native'
 import { useEffect,useState,useRef,useLayoutEffect,} from "react";
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
@@ -13,30 +13,31 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import {MaterialIcons} from '@expo/vector-icons/';
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
-import {addChat,readChat,} from '@/constants/file';
+import {addChat,readChat,ChatMessage,splitSend,addChunk} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import {RTCView} from "react-native-webrtc"
 import * as ScreenCapture from 'expo-screen-capture';
-// import * as DocumentPicker from 'expo-document-picker';
+import * as DocumentPicker from 'expo-document-picker';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
     nam: string;
 };
-
 export default function Chat() {
     const { uid, nam } = useRoute().params as RouteParams;
+    const {width } = Dimensions.get('window')
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const [txt,stxt] = useState('');
     const [yar,syar] = useState('');
     const [titNam,stitNam] = useState(nam);
-    const [msgs,smgs] = useState<{ msg: string; yar: string }[]>([]);
+    const [msgs,smgs] = useState<ChatMessage[]>([]);
     const [edit,sedit] = useState(false);
-    const [call,scall] = useState(false);
+    const [call,scall] = useState<'NA'|'IN'|'ON'>('NA');
+    const [fileSta,sfileSta] = useState<'NA'|'PRE'|'ON'>('NA');
     const [flip,sflip] = useState(true);
+    const [file,sfile] = useState<DocumentPicker.DocumentPickerAsset[]>([])
     const [remAud,sremAud] = useState(true);
     const [locAud,slocAud] = useState(true);
-    const [downCall,sdownCall] = useState(false);
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const lstChng = useRef<number>(0);
@@ -45,11 +46,7 @@ export default function Chat() {
     const peer = useRef<P2P | null>(null);
     const nav = useNavigation();
 
-    useLayoutEffect(()=>{
-        nav.setOptions({
-            headerShown: false,
-        });
-    },[nav])
+    useLayoutEffect(()=>{nav.setOptions({headerShown: false,})},[nav])
     useEffect(() => {
         AsyncStorage.getItem("uid").then(syar);
         const path = `${FileSystem.documentDirectory}${uid}.nin`;
@@ -68,14 +65,18 @@ export default function Chat() {
         return () => clearInterval(interval);
     }, []);
     useEffect(()=>{
+        
+        // const adv = addChunk(path)
         ScreenCapture.preventScreenCaptureAsync();
         peer.current = new P2P({
-            onRemStrm:setRemoteStream,
             onICE:(candidate)=>{
                 socket.emit('candidate', uid, candidate);
             },
             onDatClose:()=>{
                 peer.current?.clean()
+            },
+            onRemStrm:(e)=>{
+                setRemoteStream(e)
             }
 
         })
@@ -98,16 +99,15 @@ export default function Chat() {
             }
         })
         socket.on('rqcall',async(vid)=>{
-            setLocalStream((await peer.current?.stStrm(vid)));
-            scall(true)
-            sdownCall(true)
-            scall(true)
+            const stream = await peer.current?.stStrm(vid);
+            if (stream) setLocalStream(stream);
+            scall('IN')
         })
         socket.on('endcall',()=>{
             setLocalStream(null);
             setRemoteStream(null);
-            scall(false)
-            peer.current.clean()
+            scall('NA')
+            peer.current?.clean()
         })
         return ()=>{
             ScreenCapture.allowScreenCaptureAsync();
@@ -115,25 +115,32 @@ export default function Chat() {
             socket.off('answer');
             socket.off("candidate")
             socket.off('endcall');
+            socket.off('rqcall');
             peer.current?.close();
             localStream?.getTracks().forEach(track => track.stop());;
             remoteStream?.getTracks().forEach(track => track.stop());
         }
     },[]) 
+    const ckPath = async (): Promise<string> => {
+        const path = `${RNFS.ExternalStorageDirectoryPath}pandaDoc/`;
+        const exists = await RNFS.exists(path);
+        if (!exists) await RNFS.mkdir(path);
+        return path;
+    };
     const rqCall = async(vid:boolean=false)=>{
-        setLocalStream((await peer.current?.stStrm(vid)));
-        scall(true)
+        const stream = await peer.current?.stStrm(vid);
+        if (stream) setLocalStream(stream);
+        scall('ON')
         socket.emit('rqcall',uid,vid);
     }
     const stCall= async()=>{
         peer.current?.initPeer()
         const offer = await peer.current?.crOff();
-        sdownCall(false)
         socket.emit('offer', uid, offer);
     }
     const enCall = ()=>{
         peer.current?.clean()
-        scall(false)
+        scall('NA')
         socket.emit('endcall',uid)
     }
     const flipCamera = async () => {
@@ -165,8 +172,9 @@ export default function Chat() {
 
     const sendMsg = async()=>{
         if(!txt.trim())return;
-        socket.emit('chat',uid,{msg:txt.trim(),yar});
-        await addChat(uid,{msg:txt.trim(),yar}).catch(e=>{console.log(`chat not added error occur ${e.message} \n`,e)})
+        const msg = {msg:txt.trim(),yar,time:Date.now()} as ChatMessage
+        socket.emit('chat',uid,msg);
+        await addChat(uid,msg)
         stxt('');
     }
     const changeNam = async ()=>{
@@ -179,26 +187,49 @@ export default function Chat() {
             return !prevEdit;
         });
     }
-    // const pickMediaFiles = async () => {
-    //     try {
-    //         const result = await DocumentPicker.getDocumentAsync({
-    //             type: '*/*', 
-    //             multiple: true,
-    //             copyToCacheDirectory: true,
-    //         });
-    //         if (result && result.assets) {
-    //             for (let file of result.assets) {
-    //                 // Single file
-    //             }
-    //         } else if (result.type === 'success') {
-    //             console.log('Single File:', result);
-    //         } else {
-    //             console.log('Picker cancelled or failed.');
-    //         }
-    //     } catch (error) {
-    //         console.error('Error picking files:', error);
-    //     }
-    // };
+    const pikFls = async () => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: '*/*', 
+                multiple: true,
+                copyToCacheDirectory: true,
+            });
+            if (!result.canceled && result.assets) {
+                sfile(result.assets)
+                sfileSta('PRE')
+            } else {
+                console.log('Picker cancelled or failed.');
+            }
+        } catch (error) {
+            console.error('Error picking files:', error);
+        }
+    };
+    const shoFls = ({item}:{item:DocumentPicker.DocumentPickerAsset}) =>{
+        switch (item.mimeType?.split('/')[0]) {
+            case 'image':
+                return(<ThemedView style={[style.file,{width}]}><Image source={{uri:item.uri}} resizeMode='contain' style={{height:'100%',width:'100%'}} /></ThemedView>)
+            default:
+                return(<ThemedView style={[style.file,{width}]}><ThemedText>{item.name}</ThemedText></ThemedView>)
+        }
+    }
+    const sendFls = async () => {
+        if (!file.length) return;
+        await peer.current?.initPeer(true);
+        const dc = peer.current?.getDatChannel();
+        if (!dc || !dc.send) return;
+        for (const f of file) {
+            if (!f.size) {
+                console.warn(`Skipping ${f.name}: missing file size.`);
+                continue;
+            }
+            await splitSend({ name: f.name, uri: f.uri, size: f.size }, dc.send.bind(dc));
+        }
+    };
+    const preSndFls = async()=>{
+        // TODO
+        await sendFls()
+    }
+
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -231,8 +262,7 @@ export default function Chat() {
                     <ThemedView style={style.eventArea}>
                         <ThemedView style={[style.textArea,{borderColor}]} >
                             <ThemedInput style={style.inputfield} placeholder='Tyye...' value={txt} onChangeText={stxt} />
-
-                            <TouchableOpacity style={style.sendbtn} onPress={sendMsg} >
+                            <TouchableOpacity style={style.sendbtn} onPress={pikFls} >
                                     <MaterialIcons name="attach-file" size={24} color={borderColor}/>
                             </TouchableOpacity>
                             <TouchableOpacity style={style.sendbtn} onPress={sendMsg} >
@@ -240,16 +270,32 @@ export default function Chat() {
                             </TouchableOpacity>
                         </ThemedView>
                     </ThemedView>
-                    <Modal visible={call} onRequestClose={()=>scall(false)} transparent={true}>
+                    <Modal visible={fileSta === 'PRE'} onRequestClose={()=>{sfile([]);sfileSta('NA');}} transparent>
+                        <FlatList data={file} keyExtractor={i=>i.uri} style={style.chat} renderItem={shoFls} horizontal showsHorizontalScrollIndicator={false} pagingEnabled/>
+                        <ThemedView style={{flex:0.1,alignItems:'center',justifyContent:'space-around',flexDirection:'row'}}>
+                            <TouchableOpacity onPress={()=>sfile([])}>
+                                <MaterialIcons name='cancel' size={30} color={borderColor}/>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={preSndFls}>
+                                <MaterialIcons name='send' size={30} color={borderColor}/>
+                            </TouchableOpacity>
+                        </ThemedView>
+                    </Modal>
+                    <Modal visible={call != 'NA'} onRequestClose={()=>scall('NA')} transparent>
                         <ThemedView style={style.chat}>
-                            {localStream && (<RTCView streamURL={localStream.toURL()} objectFit='cover' mirror={flip} style={{height:'45%',width:"100%"}}/>)}
+                            <ThemedView style={[{height:'45%',width:"100%"},style.chat]}>
+                                {localStream && (<RTCView streamURL={localStream.toURL()} objectFit='cover' mirror={flip} style={{height:'100%',width:"100%"}}/>)}
+                                <TouchableOpacity onPress={() => audioOut(localStream, slocAud)} style={{position:"absolute",bottom:5,right:5}} >
+                                    <MaterialIcons name={locAud?"mic":"mic-off"} size={35} color={borderColor}/>
+                                </TouchableOpacity>
+                            </ThemedView>
                             {remoteStream && (<RTCView streamURL={remoteStream.toURL()} objectFit='cover'  style={{height:'45%',width:"100%"}}/>)}
                             <ThemedView style={style.calBtn}>
                                 <TouchableOpacity onPress={() => audioOut(remoteStream, sremAud)} >
                                     <MaterialIcons name={remAud?"volume-up":"volume-off"} size={35} color={borderColor}/>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={downCall?stCall:enCall} >
-                                    <MaterialIcons name={downCall?"call":"call-end"} size={35} color={borderColor}/>
+                                <TouchableOpacity onPress={call=='IN'?stCall:enCall} >
+                                    <MaterialIcons name={call=='IN'?"call":"call-end"} size={35} color={borderColor}/>
                                 </TouchableOpacity>
                                 <TouchableOpacity onPress={flipCamera} >
                                     <MaterialIcons name="flip-camera-android" size={35} color={borderColor}/>
@@ -311,5 +357,11 @@ const style = StyleSheet.create({
         justifyContent:'space-around',
         borderWidth:1,
         borderColor:"#fff"
+    },
+    file:{
+        flex:1,
+        justifyContent:'center',
+        alignItems:'center',
+        height:'100%'
     }
 })
