@@ -83,11 +83,8 @@ export default function HomeScreen() {
             {file.length?
             <FlatList data={file} keyExtractor={i=>i.path} renderItem={list}/>:
                 <ThemedView style={styles.loadSceen}>
-                    <ThemedText>loading...</ThemedText>
                     <ThemedText>Read all document it may take  some time...</ThemedText>
-                    {
-                        // <Image resizeMode="contain" source={require('../../assets/images/read.gif')}/> 
-                    }
+                    <Image resizeMode="contain" source={require('../../assets/images/read.gif')}/> 
                 </ThemedView>
             }
             <Modal animationType="fade" transparent={true} visible={vis}>
