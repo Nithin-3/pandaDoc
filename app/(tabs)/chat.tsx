@@ -44,6 +44,7 @@ export default function Chat() {
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
     const peer = useRef<P2P | null>(null);
+    const fAdd = useRef(null);
     const nav = useNavigation();
 
     useLayoutEffect(()=>{nav.setOptions({headerShown: false,})},[nav])
@@ -65,8 +66,6 @@ export default function Chat() {
         return () => clearInterval(interval);
     }, []);
     useEffect(()=>{
-        
-        // const adv = addChunk(path)
         ScreenCapture.preventScreenCaptureAsync();
         peer.current = new P2P({
             onICE:(candidate)=>{
@@ -77,7 +76,7 @@ export default function Chat() {
             },
             onRemStrm:(e)=>{
                 setRemoteStream(e)
-            }
+            },
 
         })
         socket.on('offer', async (offer) => {
@@ -134,7 +133,8 @@ export default function Chat() {
             const isadd = await down.get(chunk.n)?.(chunk);
             if (typeof isadd === 'string') {
                 down.delete(chunk.n);
-                // set path in sended
+                const msg = {uri:isadd,yar:"mid",time:Date.now()} as ChatMessage 
+                await addChunk(uri,msg)
             }
             else if(!isadd){
                 // set in failed
