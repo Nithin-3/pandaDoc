@@ -5,7 +5,7 @@ interface FileInfo {
   name: string;
   size: number;
 }
-interface ChunkMessage {
+export interface ChunkMessage {
   d: string;
   i: number;
   s: number;
@@ -13,7 +13,7 @@ interface ChunkMessage {
 }
 
 type SendChunk = (data: string) => void;
-type writeFunction = (chunk:ChunkMessage,path:string) => Promise<string|boolean>;
+export type writeFunction = (chunk:ChunkMessage) => Promise<string|boolean>;
 export type ChatMessage = {
       msg?: string;
     uri?:string;
@@ -96,7 +96,6 @@ export const splitSend = async(file: FileInfo, send: SendChunk): Promise<boolean
 export const addChunk = (path: string): writeFunction => {
     const fileMap = new Map<number, string>();
     let fsize = 0, fname = '';
-
     return async (chunk: ChunkMessage): Promise<string | boolean> => {
         const { d, s, n, i } = chunk;
         fileMap.set(i, d);

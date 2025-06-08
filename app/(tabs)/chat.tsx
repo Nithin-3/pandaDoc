@@ -13,7 +13,7 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import {MaterialIcons} from '@expo/vector-icons/';
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
-import {addChat,readChat,ChatMessage,splitSend,addChunk} from '@/constants/file';
+import {addChat,readChat,ChatMessage,splitSend,addChunk,ChunkMessage, writeFunction} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import {RTCView} from "react-native-webrtc"
 import * as ScreenCapture from 'expo-screen-capture';
@@ -121,12 +121,30 @@ export default function Chat() {
             remoteStream?.getTracks().forEach(track => track.stop());
         }
     },[]) 
-    const ckPath = async (): Promise<string> => {
+    const genAdd = async function* (){
         const path = `${RNFS.ExternalStorageDirectoryPath}pandaDoc/`;
         const exists = await RNFS.exists(path);
         if (!exists) await RNFS.mkdir(path);
-        return path;
-    };
+        const down = new Map<string ,writeFunction >();
+        while (true) {
+            const chunk:ChunkMessage =  yield;
+            if(!down.has(chunk.n)){
+                down.set(chunk.n,addChunk(path));
+            }
+            const isadd = await down.get(chunk.n)?.(chunk);
+            if (typeof isadd === 'string') {
+                down.delete(chunk.n);
+                // set path in sended
+            }
+            else if(!isadd){
+                // set in failed
+            }
+            if (0 === down.size) {
+                break;
+            }
+        }
+        down.clear()
+    }
     const rqCall = async(vid:boolean=false)=>{
         const stream = await peer.current?.stStrm(vid);
         if (stream) setLocalStream(stream);
