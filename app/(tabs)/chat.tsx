@@ -291,7 +291,7 @@ export default function Chat() {
                     <Modal visible={fileSta === 'PRE'} onRequestClose={()=>{sfile([]);sfileSta('NA');}} transparent>
                         <FlatList data={file} keyExtractor={i=>i.uri} style={style.chat} renderItem={shoFls} horizontal showsHorizontalScrollIndicator={false} pagingEnabled/>
                         <ThemedView style={{flex:0.1,alignItems:'center',justifyContent:'space-around',flexDirection:'row'}}>
-                            <TouchableOpacity onPress={()=>sfile([])}>
+                            <TouchableOpacity onPress={()=>{sfile([]);sfileSta('NA')}}>
                                 <MaterialIcons name='cancel' size={30} color={borderColor}/>
                             </TouchableOpacity>
                             <TouchableOpacity onPress={preSndFls}>
