@@ -76,7 +76,9 @@ const ChatContactsScreen = () => {
                 datAdd.delete(peerId)
             },
             onICE:(candidate,uid)=>{
-                socket.emit('candidate', uid, candidate);
+                AsyncStorage.getItem('uid').then(yar=>{
+                    socket.emit('ice', uid,yar, candidate);
+                })
             }
 
         })
@@ -84,15 +86,18 @@ const ChatContactsScreen = () => {
         socket.on('offer',async (peerId:string,off)=>{
             peer.current?.setRemDisc(peerId,off);
             const ans = await peer.current?.crAns(peerId);
-            socket.emit('answer',peerId,ans);
+            socket.emit('answer',peerId,await AsyncStorage.getItem('uid'),ans);
         })
         socket.on('answer',async(peerId:string,ans)=>{
+            peer.current || console.warn('404 peer')
             peer.current?.setRemDisc(peerId,ans);
         })
-        socket.on('candidate',async(peerId:string,candidate)=>{
+        socket.on('ice',async(peerId:string,candidate)=>{
+            peer.current || console.warn('404 peer')
             peer.current?.addICE(peerId,candidate)
         })
         socket.on('rqcall',async(peerId:string,vid:boolean)=>{
+            peer.current || console.warn('404 peer')
             await peer.current?.initPeer(peerId);
             await peer.current?.stStrm(vid);
             nav.navigate('call',{uid:peerId,cal:'IN',nam:'dgerbeb'} as RouteParamsCall)

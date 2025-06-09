@@ -44,17 +44,10 @@ export class P2P{
         return strm;
     }
 
-    async bgnStrm (peerId:string){
-        this.locStream &&
-            this.peer.get(peerId)?.getSenders()?.forEach(s=>{
-                if('audio' === s.track?.kind || 'video' === s.track?.kind){
-                    s.replaceTrack(this.locStream?.getTracks().find(t=>t.kind === s.track?.kind) || null)
-                }
-            });
-    }
  
     async initPeer(peerId:string,dataChannel:boolean = false){
         const peer = new RTCPeerConnection(config)
+        this.locStream && this.locStream.getTracks().forEach(t=>peer.addTrack(t,this.locStream!))
         peer.onicecandidate = e=>{
             e.candidate && this.handlers.onICE?.(e.candidate,peerId);
         }

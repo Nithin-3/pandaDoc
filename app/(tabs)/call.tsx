@@ -1,4 +1,4 @@
-import {TouchableOpacity,StyleSheet, Dimensions} from 'react-native';
+import {TouchableOpacity,StyleSheet} from 'react-native';
 import {useState,useLayoutEffect, useEffect} from "react";
 import {RTCView} from "react-native-webrtc"
 import {MaterialIcons} from '@expo/vector-icons/';
@@ -9,6 +9,7 @@ import {useNavigation} from 'expo-router'
 import {useRoute} from "@react-navigation/native"
 import { peer } from '@/constants/webrtc';
 import socket from '@/constants/Socket';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 type RouteParams = {
     uid:string;
     nam:string;
@@ -18,6 +19,7 @@ export default function call(){
     const { uid, nam , cal } = useRoute().params as RouteParams;
     const [remAud,sremAud] = useState(true);
     const [locAud,slocAud] = useState(true);
+    const [yar,syar] = useState('');
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const [call,scall] = useState<'IN'|'ON'>(cal);
@@ -26,16 +28,24 @@ export default function call(){
     const nav = useNavigation();
     useLayoutEffect(()=>{nav.setOptions({headerShown: false,})},[nav])
     useEffect(()=>{
-        console.log(uid,nam);
+        AsyncStorage.getItem("uid").then(e=>e ?? '').then(syar);
         (async()=>{
-        await peer?.bgnStrm(uid);
-        setLocalStream((await peer?.getLocStrm()));
-        setRemoteStream((await peer?.getRemStrm(uid)));
+            setLocalStream((await peer?.getLocStrm()));
+            setRemoteStream((await peer?.getRemStrm(uid)));
         })();
+        const remStrm = (strm:MediaStream,peerId:string)=>{
+            peerId === uid && setRemoteStream(strm);
+        }
+        peer && (peer['handlers'].onRemStrm = remStrm);
         socket.on('encall',()=>{
-            peer?.close(uid);
+            peer?.clean(uid);
             nav.goBack();
         })
+        return ()=>{
+            if(peer && remStrm === peer['handlers'].onRemStrm){
+                peer['handlers'].onRemStrm = undefined;
+            }
+        }
     },[])
     const audioOut = (stream: MediaStream|null,set: Function) => {
         stream?.getAudioTracks().forEach(track => {
@@ -56,72 +66,72 @@ export default function call(){
     };
     const stCall = async ()=>{
         const off = await peer?.crOff(uid);
-        socket.emit('offer',uid,off);
+        socket.emit('offer',uid, yar,off);
         scall('ON')
 
     }
     const enCall =()=>{
+        socket.emit('encall',uid);
         peer?.close(uid);
         nav.goBack();
-        socket.emit('encall');
     }
     return (
-  <ThemedView style={style.chat}>
-    <ThemedView style={style.videoHalf}>
-      {localStream && (
-        <RTCView streamURL={localStream.toURL()} objectFit="cover" mirror={flip} style={StyleSheet.absoluteFill} />
-      )}
-      <TouchableOpacity onPress={() => audioOut(localStream, slocAud)} style={style.micBtn}>
-        <MaterialIcons name={locAud ? 'mic' : 'mic-off'} size={30} color={borderColor} />
-      </TouchableOpacity>
-    </ThemedView>
-    <ThemedView style={style.videoHalf}>
-      {remoteStream && (
-        <RTCView streamURL={remoteStream.toURL()} objectFit="cover" style={StyleSheet.absoluteFill} />
-      )}
-    </ThemedView>
-    <ThemedView style={style.calBtn}>
-      <TouchableOpacity onPress={() => audioOut(remoteStream, sremAud)}>
-        <MaterialIcons name={remAud ? 'volume-up' : 'volume-off'} size={30} color={borderColor} />
-      </TouchableOpacity>
-      <TouchableOpacity onPress={call === 'IN' ? stCall : enCall}>
-        <MaterialIcons name={call === 'IN' ? 'call' : 'call-end'} size={30} color={borderColor} />
-      </TouchableOpacity>
-      <TouchableOpacity onPress={flipCamera}>
-        <MaterialIcons name="flip-camera-android" size={30} color={borderColor} />
-      </TouchableOpacity>
-    </ThemedView>
-  </ThemedView>
-);
+        <ThemedView style={style.chat}>
+            <ThemedView style={style.videoHalf}>
+                {localStream && (
+                    <RTCView streamURL={localStream.toURL()} objectFit="cover" mirror={flip} style={StyleSheet.absoluteFill} />
+                )}
+                <TouchableOpacity onPress={() => audioOut(localStream, slocAud)} style={style.micBtn}>
+                    <MaterialIcons name={locAud ? 'mic' : 'mic-off'} size={30} color={borderColor} />
+                </TouchableOpacity>
+            </ThemedView>
+            <ThemedView style={style.videoHalf}>
+                {remoteStream && (
+                    <RTCView streamURL={remoteStream.toURL()} objectFit="cover" style={StyleSheet.absoluteFill} />
+                )}
+            </ThemedView>
+            <ThemedView style={style.calBtn}>
+                <TouchableOpacity onPress={() => audioOut(remoteStream, sremAud)}>
+                    <MaterialIcons name={remAud ? 'volume-up' : 'volume-off'} size={30} color={borderColor} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={call === 'IN' ? stCall : enCall}>
+                    <MaterialIcons name={call === 'IN' ? 'call' : 'call-end'} size={30} color={borderColor} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={flipCamera}>
+                    <MaterialIcons name="flip-camera-android" size={30} color={borderColor} />
+                </TouchableOpacity>
+            </ThemedView>
+        </ThemedView>
+    );
 
 
 }
 const style = StyleSheet.create({
-  chat: {
-    flex: 1,
-  },
-  videoHalf: {
-    height: '50%',
-    width: '100%',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  micBtn: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-  },
-  calBtn: {
-    height: 60,
-    width: '100%',
-    position: 'absolute',
-    bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderColor: '#fff',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
+    chat: {
+        flex: 1,
+    },
+    videoHalf: {
+        height: '50%',
+        width: '100%',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    micBtn: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+    },
+    calBtn: {
+        height: 60,
+        width: '100%',
+        position: 'absolute',
+        bottom: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        borderTopWidth: 1,
+        borderColor: '#fff',
+        backgroundColor: 'rgba(0,0,0,0.3)',
+    },
 })
 

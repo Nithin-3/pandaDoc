@@ -68,7 +68,7 @@ export default function Chat() {
         }
     },[]) 
     const rqCall = async(vid:boolean=false)=>{
-        socket.emit('rqcall',uid,vid);
+        socket.emit('rqcall',uid, yar,vid);
         await peer?.initPeer(uid);
         await peer?.stStrm(vid).catch(console.warn)
         nav.navigate('call',{uid,nam,cal:'ON'} as RouteParamsCall)
