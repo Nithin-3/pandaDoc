@@ -1,83 +1,101 @@
 import {mediaDevices,MediaStream,RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,RTCDataChannel} from 'react-native-webrtc'
 export interface Handlers {
-    onRemStrm?:(strm:MediaStream) => void;
-    onICE?:(candidate:RTCIceCandidate) => void;
-    onData?:(data:string)=>void;
-    onDatOpen?:()=>void;
-    onDatClose?:()=>void;
+    onRemStrm?:(strm:MediaStream,peerId:string) => void;
+    onICE?:(candidate:RTCIceCandidate,peerId:string) => void;
+    onData?:(data:string,peerId:string)=>void;
+    onDatOpen?:(peerId:string)=>void;
+    onDatClose?:(peerId:string)=>void;
 }
 export const config = {
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 };
+export let peer:P2P|null = null;
 export class P2P{
-    private peer: RTCPeerConnection | null = null;
+    private peer= new Map<string, RTCPeerConnection>();
     private locStream: MediaStream | null = null;
-    private remStream: MediaStream | null = null;
-    private dataChannel: RTCDataChannel | null = null;
+    private remStream= new Map<String,MediaStream>();
+    private dataChannel = new Map<String,RTCDataChannel>();
     private handlers: Handlers = {};
 
     constructor(handlers: Handlers = {}) {
         this.handlers = handlers;
+        peer = this; 
     }
 
     getLocStrm(){
         return this.locStream;
     }
 
-    getRemStrm(){
-        return this.remStream;
+   getRemStrm(peerId: string) {
+        return this.remStream.get(peerId) || null;
     }
 
-    getPeer(){
-        return this.peer;
+    getPeer(peerId: string) {
+        return this.peer.get(peerId) || null;
     }
 
-    getDatChannel(){
-        return this.dataChannel
+    getDatChannel(peerId: string) {
+        return this.dataChannel.get(peerId) || null;
     }
-
     async stStrm(video: boolean | MediaTrackConstraints){
+        if(this.locStream) return null;
         const strm = await mediaDevices.getUserMedia({audio:true,video})
         this.locStream = strm;
         return strm;
     }
+
+    async bgnStrm (peerId:string){
+        this.locStream &&
+            this.peer.get(peerId)?.getSenders()?.forEach(s=>{
+                if('audio' === s.track?.kind || 'video' === s.track?.kind){
+                    s.replaceTrack(this.locStream?.getTracks().find(t=>t.kind === s.track?.kind) || null)
+                }
+            });
+    }
  
-    async initPeer(dataChannel:boolean = false){
-        this.peer = new RTCPeerConnection(config)
-        this.locStream && this.locStream.getTracks().forEach(t=>{this.peer?.addTrack(t,this.locStream)});
-        this.peer.onicecandidate = e=>{
-            e.candidate && this.handlers.onICE?.(e.candidate);
+    async initPeer(peerId:string,dataChannel:boolean = false){
+        const peer = new RTCPeerConnection(config)
+        peer.onicecandidate = e=>{
+            e.candidate && this.handlers.onICE?.(e.candidate,peerId);
         }
-        this.peer.oniceconnectionstatechange = () => {
-            const state = this.peer?.iceConnectionState;
+       peer.oniceconnectionstatechange = () => {
+            const state = peer.iceConnectionState;
             if (state === 'disconnected' || state === 'failed' || state === 'closed') {
-                this.handlers.onDatClose?.();
+                this.handlers.onDatClose?.(peerId);
+                this.close(peerId)
             }
         }
-        this.peer.ontrack = e=>{
-            this.remStream = e.streams[0];
-            this.handlers.onRemStrm?.(this.remStream);
+        peer.ontrack = e=>{
+            let stream = this.remStream.get(peerId);
+            if (!stream) {
+                stream = new MediaStream();
+                this.remStream.set(peerId, stream);
+                this.handlers.onRemStrm?.(stream, peerId);
+            }
+            stream.addTrack(e.track); 
         }
         if (dataChannel) {
-            this.dataChannel = this.peer.createDataChannel('chat');
-            this.setDatChannel(this.dataChannel);
+            const dataChannel = peer.createDataChannel('chat');
+            this.setDatChannel(dataChannel,peerId);
         } else {
-            this.peer.ondatachannel = (event) => {
-                this.dataChannel = event.channel;
-                this.setDatChannel(this.dataChannel);
+            peer.ondatachannel = (event) => {
+                const dataChannel = event.channel;
+                this.setDatChannel(dataChannel,peerId);
             };
         }
+        this.peer.set(peerId,peer)
     }
 
-    private setDatChannel(chan:RTCDataChannel){
+    private setDatChannel(chan:RTCDataChannel,peerId:string){
         chan.onopen = () => {
             console.log('[RTC] DataChannel opened');
-            this.handlers.onDatOpen?.();
+            this.handlers.onDatOpen?.(peerId);
         };
 
         chan.onclose = () => {
             console.log('[RTC] DataChannel closed');
-            this.handlers.onDatClose?.();
+            this.handlers.onDatClose?.(peerId);
+            this.close(peerId)
         };
 
         chan.onerror = (e) => {
@@ -85,52 +103,62 @@ export class P2P{
         };
 
         chan.onmessage = (e) => {
-            this.handlers.onData?.(e.data);
+            this.handlers.onData?.(e.data,peerId);
         };
+        this.dataChannel.set(peerId,chan)
     }
 
-    async crOff(){
-        if (!this.peer) throw new Error('Peer not initialized');
-        const off = await this.peer?.createOffer();
-        await this.peer?.setLocalDescription(off);
+    async crOff(peerId: string) {
+        const peer = this.getPeer(peerId);
+        if (!peer) throw new Error('Peer not initialized');
+        const off = await peer.createOffer();
+        await peer.setLocalDescription(off);
         return off;
     }
 
-    async crAns(){
-        if (!this.peer) throw new Error('Peer not initialized');
-        const ans = await this.peer?.createAnswer();
-        await this.peer?.setLocalDescription(ans);
+    async crAns(peerId: string) {
+        const peer = this.getPeer(peerId);
+        if (!peer) throw new Error('Peer not initialized');
+        const ans = await peer.createAnswer();
+        await peer.setLocalDescription(ans);
         return ans;
     }
     
-    async setRemDisc(disc:RTCSessionDescriptionInit){
-        await this.peer?.setRemoteDescription(new RTCSessionDescription(disc));
+    async setRemDisc(peerId: string, disc: RTCSessionDescriptionInit) {
+        const peer = this.getPeer(peerId);
+        if (peer) {
+            await peer.setRemoteDescription(new RTCSessionDescription(disc));
+        }
+    }
+
+    
+   async addICE(peerId: string, candidate: RTCIceCandidateInit) {
+        const peer = this.getPeer(peerId);
+        if(!peer) throw `404 peer ${peerId}: addICE`;
+        await peer.addIceCandidate(new RTCIceCandidate(candidate));
     }
     
-    async addICE(candidate:RTCIceCandidateInit){
-        await this.peer?.addIceCandidate(new RTCIceCandidate(candidate))
-    }
-    
-    async replaceVid(track:MediaStreamTrack){
-        const sender = this.peer?.getSenders().find(s=>s.track?.kind === "video");
+    async replaceVid(track:MediaStreamTrack,peerId:string){
+        const sender = this.peer.get(peerId)?.getSenders().find(s=>s.track?.kind === "video");
         sender && await sender.replaceTrack(track)
     }
     
     enStrm(){
         this.locStream?.getTracks().forEach((t) => t.stop());
-        this.remStream?.getTracks().forEach((t) => t.stop());
+        this.remStream.forEach(s=>s.getTracks().forEach((t) => t.stop()));
         this.locStream = null;
-        this.remStream = null;
+        this.remStream.clear();
     }
     
-    close(){
-        this.peer?.close();
-        this.peer = null;
-        this.dataChannel = null;
+    close(peerId:string){
+        this.peer.get(peerId)?.close();
+        this.peer.delete(peerId);
+        this.dataChannel.get(peerId)?.close();
+        this.dataChannel.delete(peerId);
     }
-     clean(){
+     clean(peerId:string){
         this.enStrm();
-        this.close();
+        this.close(peerId);
     }
 
 }

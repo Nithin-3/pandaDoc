@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { FlatList, TouchableOpacity, StyleSheet, Modal, Alert ,SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemedText } from "@/components/ThemedText";
@@ -10,10 +10,17 @@ import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
 import socket from '@/constants/Socket';
-import {addChat,rmChat} from '@/constants/file';
+import {addChat,rmChat,addChunk,writeFunction} from '@/constants/file';
+import {P2P} from '@/constants/webrtc';
+import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
 const CONTACTS_KEY = "chat_contacts";
 
+type RouteParamsCall = {
+    uid:string;
+    nam:string;
+    cal:'IN'|'ON';
+}
 const ChatContactsScreen = () => {
     interface Contact {
         id: string;
@@ -26,10 +33,8 @@ const ChatContactsScreen = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [yar,syar] = useState("");
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
-    type ChatScreenNavigationProp = {
-        navigate: (screen: string, params?: { uid: string; nam: string }) => void;
-    };
-
+    const peer = useRef<P2P|null>(null);
+    const datAdd = new Map<string,AsyncGenerator>();
     const nav = useNavigation();
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
@@ -59,32 +64,86 @@ const ChatContactsScreen = () => {
         })();
     }, [contacts])
     useEffect(() => {
+        peer.current = new P2P({
+            onDatOpen:(peerId)=>{
+                datAdd.set(peerId,genAdd());
+            },
+            onData:(data,peerId)=>{
+                datAdd.get(peerId)?.next({chunk:JSON.parse(data),peerId})
+            },
+            onDatClose:(peerId)=>{
+                peer.current?.clean(peerId)
+                datAdd.delete(peerId)
+            },
+            onICE:(candidate,uid)=>{
+                socket.emit('candidate', uid, candidate);
+            }
+
+        })
+
+        socket.on('offer',async (peerId:string,off)=>{
+            peer.current?.setRemDisc(peerId,off);
+            const ans = await peer.current?.crAns(peerId);
+            socket.emit('answer',peerId,ans);
+        })
+        socket.on('answer',async(peerId:string,ans)=>{
+            peer.current?.setRemDisc(peerId,ans);
+        })
+        socket.on('candidate',async(peerId:string,candidate)=>{
+            peer.current?.addICE(peerId,candidate)
+        })
+        socket.on('rqcall',async(peerId:string,vid:boolean)=>{
+            await peer.current?.initPeer(peerId);
+            await peer.current?.stStrm(vid);
+            nav.navigate('call',{uid:peerId,cal:'IN',nam:'dgerbeb'} as RouteParamsCall)
+        })
         socket.on('msg', async (msg) => {
             if((await addChat(msg.yar,msg)) === null) {
-                console.log('in new');
                 const newContact = {
                     id: msg.yar ,
                     name: "unknown",
                 };
                 setContacts(p=>[newContact,...p]);
             }else{
-                console.log('in push');
                 setContacts(p=>moveToFirst(p,msg.yar))
             }
-            console.log(contacts);
         });
         return ()=>{
             ScreenCapture.allowScreenCaptureAsync();
-            socket.off("msg")
         }
     }, []);
 
+    const genAdd = async function* (){
+        const path = `${RNFS.ExternalStorageDirectoryPath}pandaDoc/`;
+        const exists = await RNFS.exists(path);
+        if (!exists) await RNFS.mkdir(path);
+        const down = new Map<string ,writeFunction >();
+        while (true) {
+            const {chunk,peerId} =  yield;
+            if(!down.has(chunk.n)){
+                down.set(chunk.n,addChunk(path));
+            }
+            const isadd = await down.get(chunk.n)?.(chunk);
+            if (typeof isadd === 'string') {
+                down.delete(chunk.n);
+                addChat(peerId,{uri:isadd,yar:peerId,time:Date.now()})
+            }
+            else if(!isadd){
+                // set in failed
+            }
+            if (0 === down.size) {
+                break;
+            }
+        }
+        down.clear()
+    }
     const vis = () => setModalVisible(p=>!p)
-    function moveToFirst(arr:any[], targetId:string) {
-        const index = arr.findIndex(item => item.id === targetId);
+    function moveToFirst(arr: Contact[], targetId: string): Contact[] {
+    const index = arr.findIndex(item => item.id === targetId);
         if (index > -1) {
-            const [item] = arr.splice(index, 1);
-            arr.unshift({...item,new:item.new?item.new+1:1});
+            const updated = [...arr];
+            const [item] = updated.splice(index, 1);
+            return [{ ...item, new: (item.new || 0) + 1 }, ...updated];
         }
         return arr;
     }
@@ -121,9 +180,9 @@ const ChatContactsScreen = () => {
         addChat(uid,null);
         setContacts([newContact,...contacts]);
     };
-    const deleteContact = async (contactId:String) => {
-        const updatedContacts = contacts.filter((contact) => contact.id !== contactId);
-        rmChat(contactId).then(()=>setContacts(updatedContacts))
+    const deleteContact = async (contactId:string) => {
+        const updatedContacts = contacts?.filter((contact) => contact.id !== contactId);
+        rmChat(contactId).then(()=>setContacts(updatedContacts?? contacts))
     };
     const showDeleteAlert = (contactId:string) => {
         Alert.alert(
@@ -136,21 +195,21 @@ const ChatContactsScreen = () => {
         );
     };
     const renderSwipeableContact = ({ item }: { item: Contact }) => (
-        <Swipeable
-            renderRightActions={() => (
-                <TouchableOpacity style={styles.deleteButton} onPress={() => showDeleteAlert(item.id)}>
-                    <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
-                </TouchableOpacity>
-            )}
-        >
-            <TouchableOpacity onPress={()=>{nav.navigate('chat',{uid:item.id,nam:item.name})}} onLongPress={() => showDeleteAlert(item.id)} style={styles.contactItem}>
-                <ThemedText style={styles.contactName}>{item.name} {item.new}</ThemedText>
-                <ThemedText style={styles.contactUuid}>{item.id}</ThemedText>
+    <Swipeable
+        renderRightActions={() => (
+            <TouchableOpacity style={styles.deleteButton} onPress={() => showDeleteAlert(item.id)}>
+                <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
             </TouchableOpacity>
-        </Swipeable>
-    );
+        )}
+    >
+        <TouchableOpacity onPress={async()=>{nav.navigate('chating',{uid:item.id,nam:item.name,peer:await peer.current?.getPeer(item.id)})}} onLongPress={() => showDeleteAlert(item.id)} style={styles.contactItem}>
+            <ThemedText style={styles.contactName}>{item.name} {item.new}</ThemedText>
+            <ThemedText style={styles.contactUuid}>{item.id}</ThemedText>
+        </TouchableOpacity>
+    </Swipeable>
+);
 
-    return (
+        return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
             <GestureHandlerRootView>
                 <ThemedView style={styles.container}>
