@@ -21,6 +21,7 @@
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
+    "axios": "^1.9.0",
     "expo": "~52.0.31",
     "expo-blur": "~14.0.3",
     "expo-clipboard": "~7.0.1",
@@ -68,18 +69,18 @@
     "typescript": "^5.3.3"
   },
   "private": true,
-    "expo": {
-        "doctor": {
-            "reactNativeDirectoryCheck": {
-                "exclude": [
-                    "react-native-file-viewer",
-                    "react-native-fs",
-                    "react-native-webrtc",
-                    "react-native-external-storage-permission",
-                    "socket.io-client"
-                ],
-                "listUnknownPackages": false
-            }
-        }
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-file-viewer",
+          "react-native-fs",
+          "react-native-webrtc",
+          "react-native-external-storage-permission",
+          "socket.io-client"
+        ],
+        "listUnknownPackages": false
+      }
     }
+  }
 }
