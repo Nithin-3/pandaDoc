@@ -29,7 +29,7 @@ export const addChat = async (uid:string,msg:ChatMessage|null):Promise<boolean|n
     const {path,exist} = await pthEx(uid);
     try {
         if (exist) {
-            await FileSystem.writeAsStringAsync(path, JSON.stringify([msg??{msg:"INIT",yar:"mid"}]),{
+            await FileSystem.writeAsStringAsync(path, JSON.stringify([msg??{msg:"INIT",yar:"mid",time:Date.now()}as ChatMessage]),{
                 encoding: FileSystem.EncodingType.UTF8
             });
             return null;

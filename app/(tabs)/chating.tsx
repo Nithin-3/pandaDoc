@@ -1,4 +1,4 @@
-import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal, Image, Dimensions} from 'react-native'
+import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal, Image, Dimensions, Pressable} from 'react-native'
 import { useEffect,useState,useRef,useLayoutEffect,} from "react";
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
@@ -14,6 +14,7 @@ import {MaterialIcons} from '@expo/vector-icons/';
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,ChatMessage,splitSend} from '@/constants/file';
+import {Audio,Video} from 'expo-av'
 import * as ScreenCapture from 'expo-screen-capture';
 import * as DocumentPicker from 'expo-document-picker';
 import { peer } from '@/constants/webrtc';
@@ -112,6 +113,10 @@ export default function Chat() {
         switch (item.mimeType?.split('/')[0]) {
             case 'image':
                 return(<ThemedView style={[style.file,{width}]}><Image source={{uri:item.uri}} resizeMode='contain' style={{height:'100%',width:'100%'}} /></ThemedView>)
+            case 'video':
+                return(<ThemedView style={[style.file,{width}]}><Video source={{uri:item.uri}} useNativeControls resizeMode="contain" style={{height:'100%',width:'100%'}} /></ThemedView>)
+            case 'audio':
+                // return(<ThemedView style={[style.file,{width}]}><Audio.Sound source={{uri:item.uri}} /></ThemedView>)
             default:
                 return(<ThemedView style={[style.file,{width}]}><ThemedText>{item.name}</ThemedText></ThemedView>)
         }
@@ -134,6 +139,28 @@ export default function Chat() {
         await sendFls()
     }
 
+    const chtFls=async(uri:string)=>{
+        const info = await FileSystem.getInfoAsync(uri);
+        if(info.exists){
+            switch(info.mimeType?.split('/')[0]){
+                
+            case 'image':
+                return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><Image source={{uri:uri}} resizeMode='contain' style={{height:'100%',width:'100%'}} /></ThemedView>)
+            case 'video':
+                return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><Video source={{uri:uri}} useNativeControls resizeMode="contain" style={{height:'100%',width:'100%'}} /></ThemedView>)
+            case 'audio':
+                // return(<ThemedView style={[style.file,{width}]}><Audio.Sound source={{uri:item.uri}} /></ThemedView>)
+            default:
+                return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><ThemedText>{uri}</ThemedText></ThemedView>)
+            }
+        }
+        return(<ThemedText>file missing:{uri}</ThemedText>)
+    }
+    const rendMsg = ({item}:{item:ChatMessage})=>(<Pressable style={[style.msg,{alignSelf:item.yar==yar?"flex-end":item.yar=='mid'?'center':'flex-start'},{borderColor}]}>
+        {item.msg&&<ThemedText>{item.msg}</ThemedText>}
+        {item.uri && chtFls(item.uri)}
+        <ThemedText type='mini' style={{alignSelf:item.yar == 'mid'?'center':item.yar==yar?'flex-start':'flex-end'}}>{new Date(item.time).toLocaleString()}</ThemedText>
+    </Pressable>)
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -157,9 +184,7 @@ export default function Chat() {
                         ref={flatlis}
                         data={msgs}
                         keyExtractor={(item,index) => item?.yar+index}
-                        renderItem={({item})=><ThemedView style={[style.msg,yar!=item?.yar?{alignSelf:"flex-end"}:{alignSelf:'flex-start'},{borderColor}]}>
-                            <ThemedText>{item?.msg}</ThemedText>
-                        </ThemedView>}
+                        renderItem={rendMsg}
                         onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}
                         onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
                     />
