@@ -14,10 +14,12 @@ import {MaterialIcons} from '@expo/vector-icons/';
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,ChatMessage,splitSend} from '@/constants/file';
-import {Audio,Video} from 'expo-av'
+import axios from 'axios';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as DocumentPicker from 'expo-document-picker';
 import { peer } from '@/constants/webrtc';
+import Vid from '@/components/Vid';
+import Aud from '@/components/Aud';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
@@ -72,7 +74,7 @@ export default function Chat() {
         socket.emit('rqcall',uid, yar,vid);
         await peer?.initPeer(uid);
         await peer?.stStrm(vid).catch(console.warn)
-        nav.navigate('call',{uid,nam,cal:'ON'} as RouteParamsCall)
+        nav.navigate('call', { uid, nam, cal: 'ON' } as RouteParamsCall);
     }
 
     const sendMsg = async()=>{
@@ -114,9 +116,9 @@ export default function Chat() {
             case 'image':
                 return(<ThemedView style={[style.file,{width}]}><Image source={{uri:item.uri}} resizeMode='contain' style={{height:'100%',width:'100%'}} /></ThemedView>)
             case 'video':
-                return(<ThemedView style={[style.file,{width}]}><Video source={{uri:item.uri}} useNativeControls resizeMode="contain" style={{height:'100%',width:'100%'}} /></ThemedView>)
+                return(<ThemedView style={[style.file,{width}]}><Vid uri={item.uri}/></ThemedView>)
             case 'audio':
-                // return(<ThemedView style={[style.file,{width}]}><Audio.Sound source={{uri:item.uri}} /></ThemedView>)
+                return(<ThemedView style={[style.file,{width}]}><Aud uri={item.uri}/></ThemedView>)
             default:
                 return(<ThemedView style={[style.file,{width}]}><ThemedText>{item.name}</ThemedText></ThemedView>)
         }
@@ -136,25 +138,32 @@ export default function Chat() {
     };
     const preSndFls = async()=>{
         // TODO
+        axios.get('').then(d=>{
+            d.data
+        })
         await sendFls()
     }
-
-    const chtFls=async(uri:string)=>{
-        const info = await FileSystem.getInfoAsync(uri);
-        if(info.exists){
-            switch(info.mimeType?.split('/')[0]){
-                
+    const getType = (uri:string,mimeType:string)=>{
+        if(mimeType) return mimeType.split('/')[0];
+        const ext = uri.split('.').pop()?.toLowerCase();
+        if (!ext) return 'unknown';
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+        if (['mp4', 'mov', 'mkv', 'webm'].includes(ext)) return 'video';
+        if (['mp3', 'wav', 'aac', 'm4a', 'ogg'].includes(ext)) return 'audio';
+        return 'unknown';
+    
+    }
+    const chtFls=(uri:string)=>{
+        switch(getType(uri,'')){
             case 'image':
-                return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><Image source={{uri:uri}} resizeMode='contain' style={{height:'100%',width:'100%'}} /></ThemedView>)
+                return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><Image source={{uri}} resizeMode='contain' style={{height:'100%',width:'100%'}} /></ThemedView>)
             case 'video':
-                return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><Video source={{uri:uri}} useNativeControls resizeMode="contain" style={{height:'100%',width:'100%'}} /></ThemedView>)
+                return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><Vid uri={uri}/></ThemedView>)
             case 'audio':
-                // return(<ThemedView style={[style.file,{width}]}><Audio.Sound source={{uri:item.uri}} /></ThemedView>)
+                return(<ThemedView style={[style.file,{width}]}><Aud uri={uri}/></ThemedView>)
             default:
                 return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><ThemedText>{uri}</ThemedText></ThemedView>)
-            }
         }
-        return(<ThemedText>file missing:{uri}</ThemedText>)
     }
     const rendMsg = ({item}:{item:ChatMessage})=>(<Pressable style={[style.msg,{alignSelf:item.yar==yar?"flex-end":item.yar=='mid'?'center':'flex-start'},{borderColor}]}>
         {item.msg&&<ThemedText>{item.msg}</ThemedText>}

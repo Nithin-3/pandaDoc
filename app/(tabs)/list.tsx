@@ -108,9 +108,9 @@ const ChatContactsScreen = () => {
                     id: msg.yar ,
                     name: "unknown",
                 };
-                setContacts(p=>[newContact,...p]);
+                setContacts(p=>[newContact,...p??[]]);
             }else{
-                setContacts(p=>moveToFirst(p,msg.yar))
+                setContacts(p=>moveToFirst(p??[],msg.yar))
             }
         });
         return ()=>{
@@ -165,11 +165,11 @@ const ChatContactsScreen = () => {
     };
     const addContact = async () => {
         if (!name.trim()) return;
-        const index = contacts.findIndex(item => item.id === uid);
+        const index = contacts?.findIndex(item => item.id === uid) || -1;
         if(-1 < index){
 
             Alert.alert(
-                `uid alredy exist in ${contacts[index].name}`,
+                `uid alredy exist in ${contacts?[index].name}`,
                 "Are you sure you want to rewrite this contact?",
                 [
                     { text: "Cancel", style: "cancel" },
@@ -183,7 +183,7 @@ const ChatContactsScreen = () => {
             name: name.trim(),
         };
         addChat(uid,null);
-        setContacts([newContact,...contacts]);
+        setContacts(p=>[newContact,...p??[]]);
     };
     const deleteContact = async (contactId:string) => {
         const updatedContacts = contacts?.filter((contact) => contact.id !== contactId);
