@@ -1,5 +1,6 @@
 import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal, Image, Dimensions, Pressable} from 'react-native'
 import { useEffect,useState,useRef,useLayoutEffect,} from "react";
+import * as clip from 'expo-clipboard'
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedInput } from '@/components/ThemedInput';
@@ -20,6 +21,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { peer } from '@/constants/webrtc';
 import Vid from '@/components/Vid';
 import Aud from '@/components/Aud';
+import Alert, { AlertProps } from '@/components/Alert';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
@@ -30,7 +32,7 @@ type RouteParamsCall = {
     nam:string;
     cal:'IN'|'ON';
 }
-export default function Chat() {
+export default function Chating() {
     const { uid, nam ,} = useRoute().params as RouteParams;
     const {width } = Dimensions.get('window')
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
@@ -41,6 +43,8 @@ export default function Chat() {
     const [edit,sedit] = useState(false);
     const [fileSta,sfileSta] = useState<'NA'|'PRE'|'ON'>('NA');
     const [file,sfile] = useState<DocumentPicker.DocumentPickerAsset[]>([])
+    const [prog,sprog] = useState(0);
+    const [alrt,salrt] = useState<AlertProps>({vis:false,setVis:()=>{salrt(p=>({...p, vis:false,title:'',discription:'',button:[]}))},title:'',discription:'',button:[]});
     const lstChng = useRef<number>(0);
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
@@ -58,7 +62,7 @@ export default function Chat() {
                     lstChng.current = new Date(stats.mtime).getTime();
                 }
             } catch (e) {
-                console.log('File read error:', e);
+                salrt(p=>({...p,vis:true,title:'file read error',discription:`${e.message}`,button:[{txt:"ok"}]}))
             }
         }, 1000); 
 
@@ -104,11 +108,9 @@ export default function Chat() {
             if (!result.canceled && result.assets) {
                 sfile(result.assets)
                 sfileSta('PRE')
-            } else {
-                console.log('Picker cancelled or failed.');
-            }
+            } 
         } catch (error) {
-            console.error('Error picking files:', error);
+                salrt(p=>({...p,vis:true,title:'Error picking files',discription:`${error.message}`,button:[{txt:"ok"}]}))
         }
     };
     const shoFls = ({item}:{item:DocumentPicker.DocumentPickerAsset}) =>{
@@ -136,12 +138,52 @@ export default function Chat() {
         //     await splitSend({ name: f.name, uri: f.uri, size: f.size }, dc.send.bind(dc));
         // }
     };
-    const preSndFls = async()=>{
-        // TODO
-        axios.get('').then(d=>{
-            d.data
-        })
-        await sendFls()
+    const preSndFls = ()=>{
+        axios.get(`http://192.168.20.146:3030/${uid}`).then(async d=>{
+            if (d.data) {
+                await sendFls();
+            }else{
+                salrt(p=>({...p,
+                    vis:true,
+                    title:`user ${nam} is offline`,
+                    discription:`you can send file(s) to server ${nam} resive when online`,
+                    button:[
+                        {
+                            txt:'send',
+                            onPress:()=>{
+                                const data = new FormData();
+                                data.append('uid',uid);
+                                data.append('yar',yar);
+                                file.forEach(fil=>{
+                                    data.append(`files`,{uri:fil.uri,name:fil.name,type: fil.mimeType || 'application/octet-stream'})
+                                })
+                                axios.post(`http://192.168.20.146:3030/`,data,{headers:{'Content-Type': 'multipart/form-data',auth:yar},onUploadProgress:(prog)=>{
+                                    sprog(Math.round(prog.loaded/(prog.total || 1) * 100))
+                                }}).then(async v=>{
+                                        for(let i = 0;i<v.data;i++){
+                                            let path = `${RNFS.ExternalStorageDirectoryPath}/pandaDoc/`;
+                                            const exists = await RNFS.exists(path);
+                                            if (!exists) await RNFS.mkdir(path);
+                                            path = `${path}-${file[i].name}`
+                                            await RNFS.copyFile(file[i].uri,path);
+                                            await addChat(uid,{uri:path,yar,time:Date.now()}as ChatMessage);
+                                        }
+                                    }).finally(()=>{
+                                        sfile([]);
+                                        sprog(0);
+                                    }).catch(e=>{
+                                        salrt(p=>({...p,vis:true,title:'Sorry...',discription:`${e.response?.status || e.message} occer`,button:[{txt:'ok'}]}))
+                                    })
+                            }
+                        },{
+                            txt:'cancel'
+                        }
+                    ]
+                }))
+            }
+        }).finally(()=>{
+                sfileSta('ON')
+            })
     }
     const getType = (uri:string,mimeType:string)=>{
         if(mimeType) return mimeType.split('/')[0];
@@ -158,17 +200,19 @@ export default function Chat() {
             case 'image':
                 return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><Image source={{uri}} resizeMode='contain' style={{height:'100%',width:'100%'}} /></ThemedView>)
             case 'video':
-                return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><Vid uri={uri}/></ThemedView>)
+                return(<ThemedView style={{width:width/2-3, aspectRatio:1,justifyContent:'center',alignItems:'center'}}><Vid uri={uri}/></ThemedView>)
             case 'audio':
-                return(<ThemedView style={[style.file,{width}]}><Aud uri={uri}/></ThemedView>)
+                return(<ThemedView style={{ width:width/2-3,justifyContent:'center',alignItems:'center' }}><Aud uri={uri}/></ThemedView>)
             default:
-                return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><ThemedText>{uri}</ThemedText></ThemedView>)
+                return(<ThemedView style={{width:width/2-3,justifyContent:'center',alignItems:'center'}}><ThemedText>{uri.replace(RNFS.ExternalStorageDirectoryPath,'')}</ThemedText></ThemedView>)
         }
     }
-    const rendMsg = ({item}:{item:ChatMessage})=>(<Pressable style={[style.msg,{alignSelf:item.yar==yar?"flex-end":item.yar=='mid'?'center':'flex-start'},{borderColor}]}>
+    const rendMsg = ({item}:{item:ChatMessage})=>(<Pressable style={{width:"100%"}} onLongPress={()=>{clip.setStringAsync(item.msg ?? item.uri ?? 'null')}}>
+        <ThemedView style={[style.msg,{alignSelf:item.yar==yar?"flex-end":item.yar=='mid'?'center':'flex-start'},{borderColor}]}>
         {item.msg&&<ThemedText>{item.msg}</ThemedText>}
         {item.uri && chtFls(item.uri)}
         <ThemedText type='mini' style={{alignSelf:item.yar == 'mid'?'center':item.yar==yar?'flex-start':'flex-end'}}>{new Date(item.time).toLocaleString()}</ThemedText>
+        </ThemedView>
     </Pressable>)
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
@@ -197,6 +241,11 @@ export default function Chat() {
                         onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}
                         onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
                     />
+                    {prog > 0 &&
+                        <ThemedView style={{height:4}}>
+                            <ThemedView style={{width:`${prog}%`,height:'100%',backgroundColor:borderColor}}/>
+                        </ThemedView>
+                    }
                     <ThemedView style={style.eventArea}>
                         <ThemedView style={[style.textArea,{borderColor}]} >
                             <ThemedInput style={style.inputfield} placeholder='Tyye...' value={txt} onChangeText={stxt} />
@@ -219,6 +268,7 @@ export default function Chat() {
                             </TouchableOpacity>
                         </ThemedView>
                     </Modal>
+<Alert {...alrt}/>
                 </ThemedView>
             </TouchableWithoutFeedback>
         </SafeAreaView>

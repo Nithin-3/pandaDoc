@@ -2,14 +2,14 @@ import { Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
-type Button = {
+export type Button = {
     txt: string;
     onPress?: () => void;
 }
 
-type AlertProps = {
+export type AlertProps = {
     vis: boolean;
-    setVis: (vis: boolean) => void;
+    setVis: () => void;
     title: string;
     discription?: string;
     button: Button[];
@@ -17,13 +17,13 @@ type AlertProps = {
 
 export default function Alert({ vis, setVis, title, discription, button }: AlertProps) {
     return (
-        <Modal visible={vis} transparent onRequestClose={() => setVis(false)}>
+        <Modal visible={vis} transparent onRequestClose={() => setVis()}>
             <ThemedView style={styles.overlay}>
                 <ThemedView style={styles.alertBox}>
                     <ThemedText style={styles.title}>{title}</ThemedText>
                     {discription && <ThemedText style={styles.description}>{discription}</ThemedText>}
                     <ThemedView style={styles.buttonView}>
-                        {button?.map((b, index) => (<TouchableOpacity key={index} onPress={()=>{b.onPress?.();setVis(false)}} style={styles.button}>
+                        {button?.map((b, index) => (<TouchableOpacity key={index} onPress={()=>{b.onPress?.();setVis()}} style={styles.button}>
                             <ThemedText>{b.txt}</ThemedText>
                         </TouchableOpacity>))}
                     </ThemedView>
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     },
     buttonView:{
         flexDirection:'row',
-        justifyContent:'space-around',
+        justifyContent:'space-evenly',
         flexWrap:'wrap',
     }
 });

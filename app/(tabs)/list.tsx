@@ -1,5 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { FlatList, TouchableOpacity, StyleSheet, Modal, Alert ,SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
+import { FlatList, TouchableOpacity, StyleSheet, Modal, SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -14,13 +14,9 @@ import {addChat,rmChat,addChunk,writeFunction} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
+import Alert, { AlertProps } from "@/components/Alert";
 const CONTACTS_KEY = "chat_contacts";
 
-type RouteParamsCall = {
-    uid:string;
-    nam:string;
-    cal:'IN'|'ON';
-}
 const ChatContactsScreen = () => {
     interface Contact {
         id: string;
@@ -32,6 +28,9 @@ const ChatContactsScreen = () => {
     const [uid, suid] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
     const [yar,syar] = useState("");
+    const [file,sfile] = useState('');
+    const [prog,sprog] = useState('');
+    const [alrt,salrt] = useState<AlertProps>({vis:false,setVis:()=>{salrt(p=>({...p, vis:false,title:'',discription:'',button:[]}))},title:'',discription:'',button:[]});
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const peer = useRef<P2P|null>(null);
     const datAdd = new Map<string,AsyncGenerator>();
@@ -89,18 +88,46 @@ const ChatContactsScreen = () => {
             socket.emit('answer',peerId,await AsyncStorage.getItem('uid'),ans);
         })
         socket.on('answer',async(peerId:string,ans)=>{
-            peer.current || console.warn('404 peer')
             peer.current?.setRemDisc(peerId,ans);
         })
         socket.on('ice',async(peerId:string,candidate)=>{
-            peer.current || console.warn('404 peer')
             peer.current?.addICE(peerId,candidate)
         })
         socket.on('rqcall',async(peerId:string,vid:boolean)=>{
-            peer.current || console.warn('404 peer')
             await peer.current?.initPeer(peerId);
             await peer.current?.stStrm(vid);
-            nav.navigate('call',{uid:peerId,cal:'IN',nam:'dgerbeb'} as RouteParamsCall)
+            nav.navigate('call',{uid:peerId,cal:'IN',nam:'dgerbeb'})
+        })
+        socket.on('wait',(tree:string[])=>{
+            tree.forEach(async url=>{
+                try{
+                    let path = `${RNFS.ExternalStorageDirectoryPath}/pandaDoc/`;
+                    const exists = await RNFS.exists(path);
+                    if (!exists) await RNFS.mkdir(path);
+                    const yar = url.split('/')
+                    path = `${path}/${yar[1]}`
+                    const dow = RNFS.downloadFile({fromUrl:`http://192.168.20.146:3030/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`,toFile:path,discretionary:true,cacheable:true,begin:()=>{
+                        sfile(yar[1].split('°').pop()??'Downloading')
+                    },progress:rs=>{
+                            sprog((rs.bytesWritten/rs.contentLength * 100).toFixed(2))
+                        },progressDivider:5})
+                    const res = await dow.promise;
+                    if(res.statusCode === 200){
+                        await addChat(yar[0],{uri:path,yar:yar[0],time:Date.now()});
+                        setContacts(p=>moveToFirst(p??[],yar[0]));
+                        sfile('');
+                        sprog('');
+                    }else{
+                        if('File(s) not Downloaded' == alrt.title){
+                            salrt(p=>({...p,discription:`${p.discription??''}\n${yar[1]}`,vis:true}));
+                        }else{
+                            salrt(p=>({...p,title:"File(s) not Downloaded",discription:yar[1],vis:true,button:[{txt:'ok'}]}));
+                        }
+                    }
+                }catch(e){
+                    salrt(p=>({...p,title:"Network error",vis:true,button:[{txt:'ok'}]}));
+                }
+            })
         })
         socket.on('msg', async (msg) => {
             if((await addChat(msg.yar,msg)) === null) {
@@ -119,7 +146,7 @@ const ChatContactsScreen = () => {
     }, []);
 
     const genAdd = async function* (){
-        const path = `${RNFS.ExternalStorageDirectoryPath}pandaDoc/`;
+        const path = `${RNFS.ExternalStorageDirectoryPath}/pandaDoc/`;
         const exists = await RNFS.exists(path);
         if (!exists) await RNFS.mkdir(path);
         const down = new Map<string ,writeFunction >();
@@ -160,22 +187,23 @@ const ChatContactsScreen = () => {
                 setContacts(JSON.parse(storedContacts));
             }
         } catch (error) {
-            console.error("Error loading contacts:", error);
+            salrt(p=>({...p,vis:true,title:"Error loading contact",discription:`${error.messae}`,button:[
+                {txt:'ok'}
+            ]}))
         }
     };
     const addContact = async () => {
         if (!name.trim()) return;
         const index = contacts?.findIndex(item => item.id === uid) || -1;
         if(-1 < index){
-
-            Alert.alert(
-                `uid alredy exist in ${contacts?[index].name}`,
-                "Are you sure you want to rewrite this contact?",
-                [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "ok", style: "destructive", onPress: () => setContacts(p=>p.map(i=>i.id===uid?{...i,name:name.trim()}:i))},
-                ]
-            );
+            salrt(p=>({...p,vis:true,title:`uid alredy exist in ${contacts[index]?.name}`,discription:"Are you sure you want to rewrite this contact?",button:[
+                {
+                    txt:'ok',
+                    onPress:() => setContacts(p=>p.map(i=>i.id===uid?{...i,name:name.trim()}:i))
+                },{
+                    txt:'cancel'
+                }
+            ]}))
             return;
         }
         const newContact = {
@@ -190,14 +218,10 @@ const ChatContactsScreen = () => {
         rmChat(contactId).then(()=>setContacts(updatedContacts?? contacts))
     };
     const showDeleteAlert = (contactId:string) => {
-        Alert.alert(
-            "Delete Contact",
-            "Are you sure you want to delete this contact?",
-            [
-                { text: "Cancel", style: "cancel" },
-                { text: "Delete", style: "destructive", onPress: () => deleteContact(contactId) },
-            ]
-        );
+        salrt(p=>({...p,vis:true,title:'Delete Contact',discription:'Are you sure you want to delete this contact?',button:[
+            {txt:'cancel'},
+            {txt:'Delete',onPress:() => deleteContact(contactId)}
+        ]}))
     };
     const renderSwipeableContact = ({ item }: { item: Contact }) => (
     <Swipeable
@@ -247,6 +271,7 @@ const ChatContactsScreen = () => {
                         </TouchableWithoutFeedback>
                     </Modal>
                 </ThemedView>
+                <Alert {...alrt}/>
             </GestureHandlerRootView>
         </SafeAreaView>
     );
