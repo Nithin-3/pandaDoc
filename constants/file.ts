@@ -87,7 +87,7 @@ export const splitSend = async(file: FileInfo, send: SendChunk): Promise<boolean
             const payload = JSON.stringify({ d: chunk, i, s: totalChunks, n: name });
             if (enc.encode(payload).length > 1024 * 16) return false;
             send(payload);
-        } catch (e) {
+        } catch {
             return false;
         }
     }

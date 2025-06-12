@@ -1,6 +1,6 @@
 import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal, Image, Dimensions, Pressable} from 'react-native'
 import { useEffect,useState,useRef,useLayoutEffect,} from "react";
-import * as clip from 'expo-clipboard'
+import * as clip from 'expo-clipboard';
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedInput } from '@/components/ThemedInput';
@@ -9,7 +9,6 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import socket from '@/constants/Socket';
 import {useRoute} from "@react-navigation/native"
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as FileSystem from 'expo-file-system';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import {MaterialIcons} from '@expo/vector-icons/';
 import {useNavigation} from 'expo-router'
@@ -27,11 +26,6 @@ type RouteParams = {
     uid: string;
     nam: string;
 };
-type RouteParamsCall = {
-    uid:string;
-    nam:string;
-    cal:'IN'|'ON';
-}
 export default function Chating() {
     const { uid, nam ,} = useRoute().params as RouteParams;
     const {width } = Dimensions.get('window')
@@ -53,32 +47,24 @@ export default function Chating() {
     useLayoutEffect(()=>{nav.setOptions({headerShown: false,})},[nav])
     useEffect(() => {
         AsyncStorage.getItem("uid").then(e=>e ?? '').then(syar);
-        const path = `${FileSystem.documentDirectory}${uid}.nin`;
-        const interval = setInterval(async () => {
-            try {
-                const stats = await RNFS.stat(path);
-                if (stats.mtime && new Date(stats.mtime).getTime() > lstChng.current){
-                    smgs((await readChat(uid))||[]);
-                    lstChng.current = new Date(stats.mtime).getTime();
-                }
-            } catch (e) {
+        ScreenCapture.preventScreenCaptureAsync();
+        socket.on('msg',(msg)=>{
+            try{
+                setTimeout(async()=>smgs((await readChat(msg.yar))||[]),300);
+            }catch(e){
                 salrt(p=>({...p,vis:true,title:'file read error',discription:`${e.message}`,button:[{txt:"ok"}]}))
             }
-        }, 1000); 
-
-        return () => clearInterval(interval);
-    }, []);
-    useEffect(()=>{
-        ScreenCapture.preventScreenCaptureAsync();
-        return ()=>{
+        })
+        return () =>{ 
             ScreenCapture.allowScreenCaptureAsync();
+            socket.off('msg');
         }
-    },[]) 
+    }, []);
     const rqCall = async(vid:boolean=false)=>{
         socket.emit('rqcall',uid, yar,vid);
         await peer?.initPeer(uid);
         await peer?.stStrm(vid).catch(console.warn)
-        nav.navigate('call', { uid, nam, cal: 'ON' } as RouteParamsCall);
+        nav.navigate('call', { uid, nam, cal: 'ON' });
     }
 
     const sendMsg = async()=>{
@@ -125,18 +111,33 @@ export default function Chating() {
                 return(<ThemedView style={[style.file,{width}]}><ThemedText>{item.name}</ThemedText></ThemedView>)
         }
     }
+    const cpUri = async(uri:string,filename:string)=>{
+        let path = `${RNFS.ExternalStorageDirectoryPath}/pandaDoc/`;
+        const exists = await RNFS.exists(path);
+        if (!exists) await RNFS.mkdir(path);
+        path = `${path}-${filename}`
+        await RNFS.copyFile(uri,path);
+        await addChat(uid,{uri:path,yar,time:Date.now()}as ChatMessage);
+    }
     const sendFls = async () => {
-        // if (!file.length) return;
-        // await peer.current?.initPeer(true);
-        // const dc = peer.current?.getDatChannel();
-        // if (!dc || !dc.send) return;
-        // for (const f of file) {
-        //     if (!f.size) {
-        //         console.warn(`Skipping ${f.name}: missing file size.`);
-        //         continue;
-        //     }
-        //     await splitSend({ name: f.name, uri: f.uri, size: f.size }, dc.send.bind(dc));
-        // }
+        if (!file.length) return;
+        await peer?.initPeer(uid,true);
+        const dc = peer?.getDatChannel(uid);
+        if (!dc && !dc.send) {
+            return;
+        }
+        for(const f of file){
+            if(!f.size){
+                // this file not added
+                continue;
+            }
+            const res = await splitSend({name:f.name,uri:f.uri,size:f.size},dc.send.bind(dc));
+            if (res) {
+                await cpUri(f.uri,f.name);
+            }else{
+                // this file not added
+            }
+        }
     };
     const preSndFls = ()=>{
         axios.get(`http://192.168.20.146:3030/${uid}`).then(async d=>{
@@ -160,15 +161,9 @@ export default function Chating() {
                                 axios.post(`http://192.168.20.146:3030/`,data,{headers:{'Content-Type': 'multipart/form-data',auth:yar},onUploadProgress:(prog)=>{
                                     sprog(Math.round(prog.loaded/(prog.total || 1) * 100))
                                 }}).then(async v=>{
-                                        for(let i = 0;i<v.data;i++){
-                                            let path = `${RNFS.ExternalStorageDirectoryPath}/pandaDoc/`;
-                                            const exists = await RNFS.exists(path);
-                                            if (!exists) await RNFS.mkdir(path);
-                                            path = `${path}-${file[i].name}`
-                                            await RNFS.copyFile(file[i].uri,path);
-                                            await addChat(uid,{uri:path,yar,time:Date.now()}as ChatMessage);
-                                        }
+                                        await Promise.all(file.splice(0,v.data).map(f=>cpUri(f.uri,f.name)));
                                     }).finally(()=>{
+                                        // check file is empty
                                         sfile([]);
                                         sprog(0);
                                     }).catch(e=>{

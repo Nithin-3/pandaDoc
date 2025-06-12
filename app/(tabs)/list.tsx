@@ -15,6 +15,7 @@ import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
 import Alert, { AlertProps } from "@/components/Alert";
+import axios from "axios";
 const CONTACTS_KEY = "chat_contacts";
 
 const ChatContactsScreen = () => {
@@ -99,7 +100,7 @@ const ChatContactsScreen = () => {
             nav.navigate('call',{uid:peerId,cal:'IN',nam:'dgerbeb'})
         })
         socket.on('wait',(tree:string[])=>{
-            tree.forEach(async url=>{
+            Promise.all([tree.map(async url=>{
                 try{
                     let path = `${RNFS.ExternalStorageDirectoryPath}/pandaDoc/`;
                     const exists = await RNFS.exists(path);
@@ -127,7 +128,9 @@ const ChatContactsScreen = () => {
                 }catch(e){
                     salrt(p=>({...p,title:"Network error",vis:true,button:[{txt:'ok'}]}));
                 }
-            })
+            })]).then(async()=>{
+                    axios.delete(`http://192.168.20.146:3030/dow/${await AsyncStorage.getItem('uid') || ''}`)
+                })
         })
         socket.on('msg', async (msg) => {
             if((await addChat(msg.yar,msg)) === null) {
