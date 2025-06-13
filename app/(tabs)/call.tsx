@@ -13,40 +13,53 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 type RouteParams = {
     uid:string;
     nam:string;
-    cal:'IN'|'ON';
+    cal:'IN'|'ON'|'DIA';
 }
-export default function call(){
+export default function Call(){
     const { uid, nam , cal } = useRoute().params as RouteParams;
     const [remAud,sremAud] = useState(true);
     const [locAud,slocAud] = useState(true);
     const [yar,syar] = useState('');
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-    const [call,scall] = useState<'IN'|'ON'>(cal);
+    const [call,scall] = useState<'IN'|'ON'|'DIA'>(cal);
     const [flip,sflip] = useState(true);
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const nav = useNavigation();
     useLayoutEffect(()=>{nav.setOptions({headerShown: false,})},[nav])
     useEffect(()=>{
-        AsyncStorage.getItem("uid").then(e=>e ?? '').then(syar);
-        (async()=>{
-            setLocalStream((await peer?.getLocStrm()));
-            setRemoteStream((await peer?.getRemStrm(uid)));
-        })();
-        const remStrm = (strm:MediaStream,peerId:string)=>{
-            peerId === uid && setRemoteStream(strm);
-        }
-        peer && (peer['handlers'].onRemStrm = remStrm);
-        socket.on('encall',()=>{
-            peer?.clean(uid);
-            nav.goBack();
-        })
+        const time = call==='DIA' && setTimeout(enCall,3*60*1000)
         return ()=>{
-            if(peer && remStrm === peer['handlers'].onRemStrm){
-                peer['handlers'].onRemStrm = undefined;
-            }
+            time && clearTimeout(time);
         }
-    },[])
+    },[call])
+    useEffect(() => {
+        let active = true;
+        AsyncStorage.getItem("uid").then(e => e ?? '').then(syar);
+        (async () => {
+            const locStrm = await peer!.getLocStrm();
+            const remStrm = await peer!.getRemStrm(uid);
+            if (active) {
+                setLocalStream(locStrm);
+                setRemoteStream(remStrm);
+            }
+        })();
+        const remStrm = (strm: MediaStream, peerId: string) => {
+            if (peerId === uid && active) setRemoteStream(strm);
+        };
+        peer!['handlers'].onRemStrm = remStrm;
+        socket.on('encall', () => {
+            peer!.close(uid);
+            peer!.enStrm();
+            nav.goBack();
+        });
+        return () => {
+            active = false;
+            if (peer!['handlers'].onRemStrm === remStrm) {
+                peer!['handlers'].onRemStrm = undefined;
+            }
+        };
+    }, []);
     const audioOut = (stream: MediaStream|null,set: Function) => {
         stream?.getAudioTracks().forEach(track => {
             set(!track.enabled)
@@ -59,20 +72,27 @@ export default function call(){
             trk._switchCamera();
         }else{
             localStream?.getTracks().forEach(t=>t.stop());
-            const fli = await peer?.stStrm({facingMode : flip? "environment":"user"});
-            await peer?.replaceVid(fli?.getVideoTracks()[0],uid)
+            const fli = await peer!.stStrm({facingMode : flip? "environment":"user"},uid)!;
+            await peer!.replaceVid(fli?.getVideoTracks()[0],uid);
+            setLocalStream(fli);
         }
         sflip(p=>!p)
     };
     const stCall = async ()=>{
-        const off = await peer?.crOff(uid);
-        socket.emit('offer',uid, yar,off);
+        try{
+            const off = await peer!.crOff(uid);
+            socket.emit('offer',uid, yar,off);
+        }catch(e:any){
+            if('Peer init failed'==e.message){
+                peer!.initPeer(uid).then(stCall)
+            }
+        }
         scall('ON')
-
     }
     const enCall =()=>{
         socket.emit('encall',uid);
-        peer?.close(uid);
+        peer!.close(uid);
+        peer!.enStrm();
         nav.goBack();
     }
     return (
@@ -97,14 +117,16 @@ export default function call(){
                 <TouchableOpacity onPress={call === 'IN' ? stCall : enCall}>
                     <MaterialIcons name={call === 'IN' ? 'call' : 'call-end'} size={30} color={borderColor} />
                 </TouchableOpacity>
+                { call === 'IN' &&
+                <TouchableOpacity onPress={enCall}>
+                    <MaterialIcons name='call-end' size={30} color={borderColor} />
+                </TouchableOpacity>}
                 <TouchableOpacity onPress={flipCamera}>
                     <MaterialIcons name="flip-camera-android" size={30} color={borderColor} />
                 </TouchableOpacity>
             </ThemedView>
         </ThemedView>
     );
-
-
 }
 const style = StyleSheet.create({
     chat: {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import {useFileProgress} from '@/components/Prog';
 import { FlatList, TouchableOpacity, StyleSheet, Modal, SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemedText } from "@/components/ThemedText";
@@ -9,8 +10,8 @@ import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler"
 import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
-import socket from '@/constants/Socket';
-import {addChat,rmChat,addChunk,writeFunction} from '@/constants/file';
+import socket, { init } from '@/constants/Socket';
+import {addChat,rmChat,addChunk,writeFunction,ChatMessage} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
@@ -24,13 +25,12 @@ const ChatContactsScreen = () => {
         name: string;
         new?: number;
     }
+    const {fileMap,setFileStatus} = useFileProgress();
     const [contacts, setContacts] = useState<Contact[] | null>(null);
     const [name, sname] = useState("");
     const [uid, suid] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
     const [yar,syar] = useState("");
-    const [file,sfile] = useState('');
-    const [prog,sprog] = useState('');
     const [alrt,salrt] = useState<AlertProps>({vis:false,setVis:()=>{salrt(p=>({...p, vis:false,title:'',discription:'',button:[]}))},title:'',discription:'',button:[]});
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const peer = useRef<P2P|null>(null);
@@ -41,6 +41,7 @@ const ChatContactsScreen = () => {
     useEffect(() => {
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
         const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {setIsKeyboardVisible(false);});
+        init();
         return () => {
             showSubscription.remove();
             hideSubscription.remove();
@@ -95,29 +96,27 @@ const ChatContactsScreen = () => {
             peer.current?.addICE(peerId,candidate)
         })
         socket.on('rqcall',async(peerId:string,vid:boolean)=>{
-            await peer.current?.initPeer(peerId);
-            await peer.current?.stStrm(vid);
+            await peer.current?.stStrm(vid,peerId);
             nav.navigate('call',{uid:peerId,cal:'IN',nam:'dgerbeb'})
         })
         socket.on('wait',(tree:string[])=>{
-            Promise.all([tree.map(async url=>{
+            Promise.all(tree.map(async url=>{
                 try{
-                    let path = `${RNFS.ExternalStorageDirectoryPath}/pandaDoc/`;
+                    let path = `${RNFS.ExternalStorageDirectoryPath}/.pandaDoc/`;
                     const exists = await RNFS.exists(path);
                     if (!exists) await RNFS.mkdir(path);
                     const yar = url.split('/')
                     path = `${path}/${yar[1]}`
                     const dow = RNFS.downloadFile({fromUrl:`http://192.168.20.146:3030/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`,toFile:path,discretionary:true,cacheable:true,begin:()=>{
-                        sfile(yar[1].split('°').pop()??'Downloading')
+                        setFileStatus(yar[0],{name:yar[1].split('°').pop()??'Downloading'})
                     },progress:rs=>{
-                            sprog((rs.bytesWritten/rs.contentLength * 100).toFixed(2))
+                        setFileStatus(yar[0],{prog:(rs.bytesWritten/rs.contentLength * 100).toFixed(2)})
                         },progressDivider:5})
                     const res = await dow.promise;
                     if(res.statusCode === 200){
                         await addChat(yar[0],{uri:path,yar:yar[0],time:Date.now()});
                         setContacts(p=>moveToFirst(p??[],yar[0]));
-                        sfile('');
-                        sprog('');
+                        setFileStatus(yar[0],{name:'',prog:''})
                     }else{
                         if('File(s) not Downloaded' == alrt.title){
                             salrt(p=>({...p,discription:`${p.discription??''}\n${yar[1]}`,vis:true}));
@@ -128,7 +127,7 @@ const ChatContactsScreen = () => {
                 }catch(e){
                     salrt(p=>({...p,title:"Network error",vis:true,button:[{txt:'ok'}]}));
                 }
-            })]).then(async()=>{
+            })).then(async()=>{
                     axios.delete(`http://192.168.20.146:3030/dow/${await AsyncStorage.getItem('uid') || ''}`)
                 })
         })
@@ -149,16 +148,17 @@ const ChatContactsScreen = () => {
     }, []);
 
     const genAdd = async function* (){
-        const path = `${RNFS.ExternalStorageDirectoryPath}/pandaDoc/`;
+        const path = `${RNFS.ExternalStorageDirectoryPath}/.pandaDoc/`;
         const exists = await RNFS.exists(path);
         if (!exists) await RNFS.mkdir(path);
         const down = new Map<string ,writeFunction >();
         while (true) {
-            const {chunk,peerId} =  yield;
+            const {chunk ,peerId} =  yield;
             if(!down.has(chunk.n)){
                 down.set(chunk.n,addChunk(path));
             }
             const isadd = await down.get(chunk.n)?.(chunk);
+            setFileStatus(peerId,{prog:(chunk.i/chunk.s).toFixed(2),name:chunk.n});
             if (typeof isadd === 'string') {
                 down.delete(chunk.n);
                 addChat(peerId,{uri:isadd,yar:peerId,time:Date.now()})
@@ -189,8 +189,8 @@ const ChatContactsScreen = () => {
             if (storedContacts) {
                 setContacts(JSON.parse(storedContacts));
             }
-        } catch (error) {
-            salrt(p=>({...p,vis:true,title:"Error loading contact",discription:`${error.messae}`,button:[
+        } catch (error:any) {
+            salrt(p=>({...p,vis:true,title:"Error loading contact",discription:`${error.message}`,button:[
                 {txt:'ok'}
             ]}))
         }
@@ -229,14 +229,19 @@ const ChatContactsScreen = () => {
     const renderSwipeableContact = ({ item }: { item: Contact }) => (
     <Swipeable
         renderRightActions={() => (
-            <TouchableOpacity style={styles.deleteButton} onPress={() => showDeleteAlert(item.id)}>
-                <ThemedText style={styles.deleteButtonText}>Delete</ThemedText>
+            <TouchableOpacity style={[styles.deleteButton,{backgroundColor:borderColor}]} onPress={() => showDeleteAlert(item.id)}>
+                <ThemedText style={styles.deleteButtonText} lightColor="#ECEDEE" darkColor="#000000">Delete</ThemedText>
             </TouchableOpacity>
-        )}
-    >
-        <TouchableOpacity onPress={async()=>{nav.navigate('chating',{uid:item.id,nam:item.name,peer:await peer.current?.getPeer(item.id)})}} onLongPress={() => showDeleteAlert(item.id)} style={styles.contactItem}>
-            <ThemedText style={styles.contactName}>{item.name} {item.new}</ThemedText>
-            <ThemedText style={styles.contactUuid}>{item.id}</ThemedText>
+        )}>
+        <TouchableOpacity onPress={()=>{setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:0}:v))); 
+                nav.navigate('chating',{uid:item.id,nam:item.name,});}} onLongPress={() => showDeleteAlert(item.id)} style={styles.contactItem}>
+                <ThemedText style={styles.contactName}>{item.name} {item.new?`(${item.new})`:''}</ThemedText>
+                <ThemedText style={styles.contactUuid}>{item.id}</ThemedText>
+                {fileMap[item.id].prog &&(<>
+                    <ThemedText type="mini">{fileMap[item.id].name}</ThemedText>
+                    <ThemedView style={{height:3}}>
+                        <ThemedView style={{width:`${Number(fileMap[uid].prog)}%`,height:'100%',backgroundColor:borderColor}}/>
+                    </ThemedView></>)}
         </TouchableOpacity>
     </Swipeable>
 );
@@ -297,13 +302,12 @@ const styles = StyleSheet.create({
     contactName: { fontSize: 18, fontWeight: "bold" },
     contactUuid: { fontSize: 14, color: "gray" },
     deleteButton: {
-        backgroundColor: "red",
         justifyContent: "center",
         alignItems: "center",
         width: 80,
         marginVertical: 5,
     },
-    deleteButtonText: { color: "white", fontWeight: "bold" },
+    deleteButtonText: {fontWeight: "bold" },
     modalContainer: {
         flex: 1,
         backgroundColor: "rgba(0, 0, 0, 0.5)",

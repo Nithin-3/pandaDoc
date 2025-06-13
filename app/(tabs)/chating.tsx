@@ -17,10 +17,11 @@ import {addChat,readChat,ChatMessage,splitSend} from '@/constants/file';
 import axios from 'axios';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as DocumentPicker from 'expo-document-picker';
-import { peer } from '@/constants/webrtc';
+import { peer,P2P } from '@/constants/webrtc';
 import Vid from '@/components/Vid';
 import Aud from '@/components/Aud';
 import Alert, { AlertProps } from '@/components/Alert';
+import { useFileProgress } from '@/components/Prog';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
@@ -30,6 +31,7 @@ export default function Chating() {
     const { uid, nam ,} = useRoute().params as RouteParams;
     const {width } = Dimensions.get('window')
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
+    const {fileMap} = useFileProgress()
     const [txt,stxt] = useState('');
     const [yar,syar] = useState('');
     const [titNam,stitNam] = useState(nam);
@@ -39,7 +41,6 @@ export default function Chating() {
     const [file,sfile] = useState<DocumentPicker.DocumentPickerAsset[]>([])
     const [prog,sprog] = useState(0);
     const [alrt,salrt] = useState<AlertProps>({vis:false,setVis:()=>{salrt(p=>({...p, vis:false,title:'',discription:'',button:[]}))},title:'',discription:'',button:[]});
-    const lstChng = useRef<number>(0);
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
     const nav = useNavigation();
@@ -48,10 +49,11 @@ export default function Chating() {
     useEffect(() => {
         AsyncStorage.getItem("uid").then(e=>e ?? '').then(syar);
         ScreenCapture.preventScreenCaptureAsync();
+        readChat(uid).then(m=>smgs(m??[]))
         socket.on('msg',(msg)=>{
             try{
                 setTimeout(async()=>smgs((await readChat(msg.yar))||[]),300);
-            }catch(e){
+            }catch(e:any){
                 salrt(p=>({...p,vis:true,title:'file read error',discription:`${e.message}`,button:[{txt:"ok"}]}))
             }
         })
@@ -62,8 +64,7 @@ export default function Chating() {
     }, []);
     const rqCall = async(vid:boolean=false)=>{
         socket.emit('rqcall',uid, yar,vid);
-        await peer?.initPeer(uid);
-        await peer?.stStrm(vid).catch(console.warn)
+        await peer!.stStrm(vid,uid);
         nav.navigate('call', { uid, nam, cal: 'ON' });
     }
 
@@ -72,6 +73,7 @@ export default function Chating() {
         const msg = {msg:txt.trim(),yar,time:Date.now()} as ChatMessage
         socket.emit('chat',uid,msg);
         await addChat(uid,msg)
+        readChat(uid).then(m=>smgs(m??[]))
         stxt('');
     }
     const changeNam = async ()=>{
@@ -112,37 +114,41 @@ export default function Chating() {
         }
     }
     const cpUri = async(uri:string,filename:string)=>{
-        let path = `${RNFS.ExternalStorageDirectoryPath}/pandaDoc/`;
+        let path = `${RNFS.ExternalStorageDirectoryPath}/.pandaDoc/`;
         const exists = await RNFS.exists(path);
         if (!exists) await RNFS.mkdir(path);
         path = `${path}-${filename}`
         await RNFS.copyFile(uri,path);
-        await addChat(uid,{uri:path,yar,time:Date.now()}as ChatMessage);
+        await addChat(uid,{uri:path,yar,time:Date.now()});
+        smgs((await readChat(uid))??[])
     }
     const sendFls = async () => {
         if (!file.length) return;
-        await peer?.initPeer(uid,true);
-        const dc = peer?.getDatChannel(uid);
-        if (!dc && !dc.send) {
-            return;
-        }
+        const dc = await peer!.initData(uid);
         for(const f of file){
             if(!f.size){
-                // this file not added
+                salrt(p=>({...p,vis:true,title:'file size not founded',discription:`skiped :${f.name}`,button:[{txt:'retry'}]}))
                 continue;
             }
             const res = await splitSend({name:f.name,uri:f.uri,size:f.size},dc.send.bind(dc));
             if (res) {
                 await cpUri(f.uri,f.name);
             }else{
-                // this file not added
+                salrt(p=>({...p,vis:true,title:'file internal read error',discription:`skiped :${f.name}`,button:[{txt:'retry'}]}))
             }
         }
     };
     const preSndFls = ()=>{
         axios.get(`http://192.168.20.146:3030/${uid}`).then(async d=>{
             if (d.data) {
-                await sendFls();
+                await peer!.initPeer(uid,true);
+                peer!.crOff(uid).then(off=>{
+                    socket.emit('offer',uid, yar,off);
+                }).catch(e=>{
+                        if(e.message=='Peer already connected'){
+                        }
+                    })
+                P2P.waitForConnection(peer!.getPeer(uid)!).then(sendFls).catch(e=>salrt(p=>({...p,vis:true,title:'unknown peer',discription:e.message,button:[{txt:'ok'}]})))
             }else{
                 salrt(p=>({...p,
                     vis:true,
@@ -161,10 +167,14 @@ export default function Chating() {
                                 axios.post(`http://192.168.20.146:3030/`,data,{headers:{'Content-Type': 'multipart/form-data',auth:yar},onUploadProgress:(prog)=>{
                                     sprog(Math.round(prog.loaded/(prog.total || 1) * 100))
                                 }}).then(async v=>{
-                                        await Promise.all(file.splice(0,v.data).map(f=>cpUri(f.uri,f.name)));
+                                        await Promise.all([sfile(p=>{
+                                            p.splice(0,v.data).map(f=>cpUri(f.uri,f.name));
+                                            return p;
+                                        })]);
                                     }).finally(()=>{
-                                        // check file is empty
-                                        sfile([]);
+                                        if(file.length>0){
+                                            preSndFls()
+                                        }
                                         sprog(0);
                                     }).catch(e=>{
                                         salrt(p=>({...p,vis:true,title:'Sorry...',discription:`${e.response?.status || e.message} occer`,button:[{txt:'ok'}]}))
@@ -236,6 +246,11 @@ export default function Chating() {
                         onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}
                         onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
                     />
+                    {fileMap[uid].prog &&(<>
+                        <ThemedText type='mini'>{fileMap[uid].name}</ThemedText>
+                        <ThemedView style={{height:4}}>
+                            <ThemedView style={{width:`${Number(fileMap[uid].prog)}%`,height:'100%',backgroundColor:borderColor}}/>
+                        </ThemedView></>)}
                     {prog > 0 &&
                         <ThemedView style={{height:4}}>
                             <ThemedView style={{width:`${prog}%`,height:'100%',backgroundColor:borderColor}}/>

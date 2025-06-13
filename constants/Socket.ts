@@ -9,20 +9,13 @@ const socket = io(SOCKET_URL, {
     reconnectionAttempts: 10,
     reconnectionDelay: 5000,
 });
-const init = async () => {
-    try {
-        let uid = await AsyncStorage.getItem("uid");
-
-        if (!uid) {
-            uid = uuid.v4();
-            await AsyncStorage.setItem("uid", uid);
-        }
-
-        socket.emit("set", uid);
-    } catch (error) {
-        console.error("Error handling UUID:", error);
+export const init = async () => {
+    let uid = await AsyncStorage.getItem("uid");
+    if (!uid) {
+        uid = uuid.v4();
+        await AsyncStorage.setItem("uid", uid);
     }
+    socket.emit("set", uid);
 };
 
-init();
 export default socket;
