@@ -246,10 +246,10 @@ export default function Chating() {
                         onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}
                         onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
                     />
-                    {fileMap[uid].prog &&(<>
-                        <ThemedText type='mini'>{fileMap[uid].name}</ThemedText>
+                    {fileMap[uid]?.prog &&(<>
+                        <ThemedText type='mini'>{fileMap[uid]?.name}</ThemedText>
                         <ThemedView style={{height:4}}>
-                            <ThemedView style={{width:`${Number(fileMap[uid].prog)}%`,height:'100%',backgroundColor:borderColor}}/>
+                            <ThemedView style={{width:`${Number(fileMap[uid]?.prog??'0')}%`,height:'100%',backgroundColor:borderColor}}/>
                         </ThemedView></>)}
                     {prog > 0 &&
                         <ThemedView style={{height:4}}>

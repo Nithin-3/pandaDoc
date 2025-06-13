@@ -78,14 +78,17 @@ export const splitSend = async(file: FileInfo, send: SendChunk): Promise<boolean
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) return false;
     const occ = enc.encode(JSON.stringify({ d: '', i: Number.MAX_VALUE, s: size, n: name })).length;
-    const CHUNK_SIZE = 1024 * 16 - occ;
+    const CHUNK_SIZE = 1024 * 12 - occ;
     const totalChunks = Math.ceil(size / CHUNK_SIZE);
     for (let i = 0; i < totalChunks; i++) {
         const start = i * CHUNK_SIZE, end = Math.min(start + CHUNK_SIZE, size);
         try {
             const chunk = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64, position: start, length: end - start });
             const payload = JSON.stringify({ d: chunk, i, s: totalChunks, n: name });
-            if (enc.encode(payload).length > 1024 * 16) return false;
+            if (enc.encode(payload).length > 1024 * 16){
+                console.log(1024*16 - enc.encode(payload).length)
+                return false;
+            }
             send(payload);
         } catch(e){
             console.warn(e)

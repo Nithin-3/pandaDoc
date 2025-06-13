@@ -11,7 +11,7 @@ import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
 import socket, { init } from '@/constants/Socket';
-import {addChat,rmChat,addChunk,writeFunction,ChatMessage} from '@/constants/file';
+import {addChat,rmChat,addChunk,writeFunction,} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
@@ -37,23 +37,13 @@ const ChatContactsScreen = () => {
     const datAdd = new Map<string,AsyncGenerator>();
     const nav = useNavigation();
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-
-    useEffect(() => {
-        const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
-        const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {setIsKeyboardVisible(false);});
-        init();
-        return () => {
-            showSubscription.remove();
-            hideSubscription.remove();
-        };
-    }, []);
     useLayoutEffect(()=>{
         nav.setOptions({
             headerShown: false,
         });
         return nav.addListener('focus', () => {
             loadContacts();
-        ScreenCapture.preventScreenCaptureAsync();
+            ScreenCapture.preventScreenCaptureAsync();
         })
     },[nav])
     useEffect(() => {
@@ -65,6 +55,9 @@ const ChatContactsScreen = () => {
         })();
     }, [contacts])
     useEffect(() => {
+        const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
+        const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {setIsKeyboardVisible(false);});
+        init();
         peer.current = new P2P({
             onDatOpen:(peerId)=>{
                 datAdd.set(peerId,genAdd());
@@ -115,6 +108,7 @@ const ChatContactsScreen = () => {
                     const res = await dow.promise;
                     if(res.statusCode === 200){
                         await addChat(yar[0],{uri:path,yar:yar[0],time:Date.now()});
+                        axios.delete(`http://192.168.20.146:3030/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`)
                         setContacts(p=>moveToFirst(p??[],yar[0]));
                         setFileStatus(yar[0],{name:'',prog:''})
                     }else{
@@ -123,13 +117,12 @@ const ChatContactsScreen = () => {
                         }else{
                             salrt(p=>({...p,title:"File(s) not Downloaded",discription:yar[1],vis:true,button:[{txt:'ok'}]}));
                         }
+                        throw new Error('hggk');
                     }
-                }catch(e){
-                    salrt(p=>({...p,title:"Network error",vis:true,button:[{txt:'ok'}]}));
+                }catch(e:any){
+                    e.message === 'hggk' || salrt(p=>({...p,title:"Network error",vis:true,button:[{txt:'ok'}]}));
                 }
-            })).then(async()=>{
-                    axios.delete(`http://192.168.20.146:3030/dow/${await AsyncStorage.getItem('uid') || ''}`)
-                })
+            }))
         })
         socket.on('msg', async (msg) => {
             if((await addChat(msg.yar,msg)) === null) {
@@ -143,6 +136,8 @@ const ChatContactsScreen = () => {
             }
         });
         return ()=>{
+            showSubscription.remove();
+            hideSubscription.remove();
             ScreenCapture.allowScreenCaptureAsync();
         }
     }, []);
@@ -237,10 +232,10 @@ const ChatContactsScreen = () => {
                 nav.navigate('chating',{uid:item.id,nam:item.name,});}} onLongPress={() => showDeleteAlert(item.id)} style={styles.contactItem}>
                 <ThemedText style={styles.contactName}>{item.name} {item.new?`(${item.new})`:''}</ThemedText>
                 <ThemedText style={styles.contactUuid}>{item.id}</ThemedText>
-                {fileMap[item.id].prog &&(<>
+                {fileMap[item.id]?.prog &&(<>
                     <ThemedText type="mini">{fileMap[item.id].name}</ThemedText>
                     <ThemedView style={{height:3}}>
-                        <ThemedView style={{width:`${Number(fileMap[uid].prog)}%`,height:'100%',backgroundColor:borderColor}}/>
+                        <ThemedView style={{width:`${Number(fileMap[uid]?.prog ?? '0')}%`,height:'100%',backgroundColor:borderColor}}/>
                     </ThemedView></>)}
         </TouchableOpacity>
     </Swipeable>
