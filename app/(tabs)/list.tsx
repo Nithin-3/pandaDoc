@@ -11,7 +11,7 @@ import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
 import socket, { init } from '@/constants/Socket';
-import {addChat,rmChat,addChunk,writeFunction,} from '@/constants/file';
+import {addChat,rmChat,addChunk,writeFunction, ChunkMessage,} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
@@ -34,7 +34,6 @@ const ChatContactsScreen = () => {
     const [alrt,salrt] = useState<AlertProps>({vis:false,setVis:()=>{salrt(p=>({...p, vis:false,title:'',discription:'',button:[]}))},title:'',discription:'',button:[]});
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const peer = useRef<P2P|null>(null);
-    const datAdd = new Map<string,AsyncGenerator>();
     const nav = useNavigation();
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     useLayoutEffect(()=>{
@@ -58,16 +57,16 @@ const ChatContactsScreen = () => {
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
         const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {setIsKeyboardVisible(false);});
         init();
+        let datAdd:(c:ChunkMessage,p:string)=>void;
+        (async()=>{
+            datAdd = await flsAdd();
+        })();
         peer.current = new P2P({
-            onDatOpen:(peerId)=>{
-                datAdd.set(peerId,genAdd());
-            },
             onData:(data,peerId)=>{
-                datAdd.get(peerId)?.next({chunk:JSON.parse(data),peerId})
+                datAdd(JSON.parse(data),peerId);
             },
             onDatClose:(peerId)=>{
-                peer.current?.clean(peerId)
-                datAdd.delete(peerId)
+                peer.current?.close(peerId)
             },
             onICE:(candidate,uid)=>{
                 AsyncStorage.getItem('uid').then(yar=>{
@@ -125,6 +124,7 @@ const ChatContactsScreen = () => {
             }))
         })
         socket.on('msg', async (msg) => {
+            if(msg.time){
             if((await addChat(msg.yar,msg)) === null) {
                 const newContact = {
                     id: msg.yar ,
@@ -133,7 +133,7 @@ const ChatContactsScreen = () => {
                 setContacts(p=>[newContact,...p??[]]);
             }else{
                 setContacts(p=>moveToFirst(p??[],msg.yar))
-            }
+            }}
         });
         return ()=>{
             showSubscription.remove();
@@ -142,30 +142,22 @@ const ChatContactsScreen = () => {
         }
     }, []);
 
-    const genAdd = async function* (){
+    const flsAdd = async()=>{
         const path = `${RNFS.ExternalStorageDirectoryPath}/.pandaDoc/`;
         const exists = await RNFS.exists(path);
         if (!exists) await RNFS.mkdir(path);
-        const down = new Map<string ,writeFunction >();
-        while (true) {
-            const {chunk ,peerId} =  yield;
-            if(!down.has(chunk.n)){
-                down.set(chunk.n,addChunk(path));
-            }
-            const isadd = await down.get(chunk.n)?.(chunk);
-            setFileStatus(peerId,{prog:(chunk.i/chunk.s).toFixed(2),name:chunk.n});
-            if (typeof isadd === 'string') {
-                down.delete(chunk.n);
-                addChat(peerId,{uri:isadd,yar:peerId,time:Date.now()})
-            }
-            else if(!isadd){
-                // set in failed
-            }
-            if (0 === down.size) {
-                break;
+        const fls = new Map<string, writeFunction>();
+        return (chunk:ChunkMessage,peerId:string)=>{
+            if(!fls.has(chunk.n)) fls.set( chunk.n, addChunk(path));
+            const res = fls.get(chunk.n)?.(chunk);
+            setFileStatus(peerId,{prog:(chunk.i/chunk.s).toFixed(1),name:chunk.n});
+            if(typeof res === 'string'){
+                addChat(peerId,{uri:res,yar:peerId,time:Date.now()});
+                fls.delete(chunk.n);
+                setFileStatus(peerId,{prog:'',name:''});
             }
         }
-        down.clear()
+
     }
     const vis = () => setModalVisible(p=>!p)
     function moveToFirst(arr: Contact[], targetId: string): Contact[] {

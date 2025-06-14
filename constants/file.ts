@@ -13,7 +13,7 @@ export interface ChunkMessage {
 }
 
 type SendChunk = (data: string) => void;
-export type writeFunction = (chunk:ChunkMessage) => Promise<string|boolean>;
+export type writeFunction = (chunk:ChunkMessage) => string|boolean;
 export type ChatMessage = {
       msg?: string;
     uri?:string;
@@ -77,7 +77,7 @@ export const splitSend = async(file: FileInfo, send: SendChunk): Promise<boolean
     const { uri, name, size } = file;
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) return false;
-    const occ = enc.encode(JSON.stringify({ d: '', i: Number.MAX_VALUE, s: size, n: name })).length;
+    const occ = enc.encode(JSON.stringify({ d: '', i: Number.MAX_SAFE_INTEGER, s: size, n: name })).length;
     const CHUNK_SIZE = 1024 * 12 - occ;
     const totalChunks = Math.ceil(size / CHUNK_SIZE);
     for (let i = 0; i < totalChunks; i++) {
@@ -100,7 +100,7 @@ export const splitSend = async(file: FileInfo, send: SendChunk): Promise<boolean
 export const addChunk = (path: string): writeFunction => {
     const fileMap = new Map<number, string>();
     let fsize = 0, fname = '';
-    return async (chunk: ChunkMessage): Promise<string | boolean> => {
+    return (chunk: ChunkMessage):string | boolean => {
         const { d, s, n, i } = chunk;
         fileMap.set(i, d);
         fsize = s;
@@ -112,15 +112,11 @@ export const addChunk = (path: string): writeFunction => {
             if (!part) return false;
             order.push(part);
         }
-        try {
-            const base64 = order.join('');
-            const fullPath = `${path}${fname}`;
-            await FileSystem.writeAsStringAsync(fullPath, base64, { encoding: FileSystem.EncodingType.Base64 });
-            fileMap.clear();
-            return fullPath;
-        } catch {
-            return false;
-        }
+        const base64 = order.join('');
+        const fullPath = `${path}${fname}`;
+        FileSystem.writeAsStringAsync(fullPath, base64, { encoding: FileSystem.EncodingType.Base64 });
+        fileMap.clear();
+        return fullPath;
     };
 };
 

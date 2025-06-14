@@ -50,9 +50,9 @@ export default function Chating() {
         AsyncStorage.getItem("uid").then(e=>e ?? '').then(syar);
         ScreenCapture.preventScreenCaptureAsync();
         readChat(uid).then(m=>smgs(m??[]))
-        socket.on('msg',(msg)=>{
+        socket.on('msg',(_msg)=>{
             try{
-                setTimeout(async()=>smgs((await readChat(msg.yar))||[]),300);
+                setTimeout(async()=>smgs((await readChat(uid))||[]),300);
             }catch(e:any){
                 salrt(p=>({...p,vis:true,title:'file read error',discription:`${e.message}`,button:[{txt:"ok"}]}))
             }
@@ -137,18 +137,20 @@ export default function Chating() {
                 salrt(p=>({...p,vis:true,title:'file internal read error',discription:`skiped :${f.name}`,button:[{txt:'retry'}]}))
             }
         }
+        peer!.close(uid);
+        socket.emit('msg',{yar:uid,time:undefined});
     };
     const preSndFls = ()=>{
         axios.get(`http://192.168.20.146:3030/${uid}`).then(async d=>{
             if (d.data) {
                 await peer!.initPeer(uid,true);
-                peer!.crOff(uid).then(off=>{
-                    socket.emit('offer',uid, yar,off);
-                }).catch(e=>{
-                        if(e.message=='Peer already connected'){
-                        }
-                    })
                 P2P.waitForConnection(peer!.getPeer(uid)!).then(sendFls).catch(e=>salrt(p=>({...p,vis:true,title:'unknown peer',discription:e.message,button:[{txt:'ok'}]})))
+                try{
+                    const off = await peer!.crOff(uid)
+                    socket.emit('offer',uid, yar,off);
+                }catch(e:any){
+                    if(e.message!='Peer already connected')salrt(p=>({...p,vis:true,title:'unknown peer',discription:e.message,button:[{txt:'ok'}]}));
+                }
             }else{
                 salrt(p=>({...p,
                     vis:true,
