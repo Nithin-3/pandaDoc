@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system';
+import {Buffer} from 'buffer'
 import {MMKV} from 'react-native-mmkv'
 const enc = new TextEncoder();
 const stor = new MMKV({id:'cht'});
@@ -55,8 +56,10 @@ export const splitSend = async (file: FileInfo, send: SendChunk): Promise<boolea
             await new Promise(res => setTimeout(res, 10));
         }
         send('{"N":"en"}');
+        console.log('send',s);
         return true;
-    } catch {
+    } catch (e){
+        console.log(e);
         return false;
     }
 };
@@ -73,8 +76,10 @@ export const addChunk = (path: string): writeFunction => {
                     fname = met.n??'';
                     dow = 0;
                     fileMap=[];
+                    console.log('res',fsize);
                     return 0;
                 case 'en':
+                    console.log(fsize,dow);
                     if (fsize !== dow) return -1;
                     const bin = fileMap.join('');
                     await FileSystem.writeAsStringAsync(`${path}${fname}`, bin, { encoding: FileSystem.EncodingType.Base64 });

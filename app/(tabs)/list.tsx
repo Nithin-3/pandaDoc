@@ -65,17 +65,19 @@ const ChatContactsScreen = () => {
                 if (!exists) await RNFS.mkdir(path);
                 dow.set(peerId,(await addChunk(path)));
             },
-            onData:async (data,peerId)=>{
-                const res = await dow.get(peerId)?.(data)
-                if(typeof res === 'string'){
-                    addChat(peerId,{uri:`file://${res}`,yar:peerId,time:Date.now()});
-                    dow.delete(peerId);
-                    setFileStatus(peerId,{prog:'',name:''});
-                }else if(res == -1){
-                    // failed
-                }else{
-                    setFileStatus(peerId,{prog:res?.toFixed(1)})
-                }
+            onData:(data,peerId)=>{
+                dow.get(peerId)?.(data).then(res=>{
+                    console.log(res);
+                    if(typeof res === 'string'){
+                        addChat(peerId,{uri:`file://${res}`,yar:peerId,time:Date.now()});
+                        dow.delete(peerId);
+                        setFileStatus(peerId,{prog:'',name:''});
+                    }else if(res == -1){
+                        // failed
+                    }else{
+                        setFileStatus(peerId,{prog:res?.toFixed(1)})
+                    }
+                })
             },
             onDatClose:(peerId)=>{
                 peer.current?.close(peerId)

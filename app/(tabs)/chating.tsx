@@ -159,9 +159,9 @@ export default function Chating() {
                                 const data = new FormData();
                                 data.append('uid',uid);
                                 data.append('yar',yar);
-                                for(let i=0;i<10;i++){
-                                    data.append('files',{uri:file[i].uri,name:file[i].name,type:file[i].mimeType || 'application/octet-stream'})
-                                }
+                                file.forEach((fil,i)=>{
+                                    i<10&&data.append('files',{uri:fil.uri,name:fil.name,type:fil.mimeType || 'application/octet-stream'})
+                                })
                                 axios.post(`http://192.168.20.146:3030/`,data,{headers:{'Content-Type': 'multipart/form-data',auth:yar},onUploadProgress:(prog)=>{
                                     sprog(Math.round(prog.loaded/(prog.total || 1) * 100))
                                 }}).then(async v=>{

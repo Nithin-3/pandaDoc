@@ -95,12 +95,11 @@ export class P2P{
 
     private setDatChannel(chan:RTCDataChannel,peerId:string){
         chan.onopen = () => {
-            console.log('[RTC] DataChannel opened');
+            console.log('open chan',peerId)
             this.handlers.onDatOpen?.(peerId);
         };
 
         chan.onclose = () => {
-            console.log('[RTC] DataChannel closed');
             this.handlers.onDatClose?.(peerId);
             this.close(peerId)
         };
@@ -108,8 +107,8 @@ export class P2P{
         chan.onerror = (e:any) => {
             console.error('[RTC] DataChannel error', e);
         };
-
         chan.onmessage = (e:any) => {
+            console.log('jfjf')
             this.handlers.onData?.(e.data,peerId);
         };
         this.dataChannel.set(peerId,chan)
