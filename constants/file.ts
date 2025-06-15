@@ -1,5 +1,7 @@
 import * as FileSystem from 'expo-file-system';
-const enc = new TextEncoder()
+import {MMKV} from 'react-native-mmkv'
+const enc = new TextEncoder();
+const stor = new MMKV({id:'cht'});
 interface FileInfo {
   uri: string;
   name: string;
@@ -20,74 +22,37 @@ export type ChatMessage = {
     time:number;
       yar: string;
 };
-const pthEx = async (uid:string):Promise<{path: string; exist: boolean}> => {
-        const path = `${FileSystem.documentDirectory}${uid}.nin`;
-        const fileInfo = await FileSystem.getInfoAsync(path);
-        return { path, exist:!fileInfo.exists };
-}
-export const addChat = async (uid:string,msg:ChatMessage|null):Promise<boolean|null> =>{
-    const {path,exist} = await pthEx(uid);
-    try {
-        if (exist) {
-            await FileSystem.writeAsStringAsync(path, JSON.stringify([msg??{msg:"INIT",yar:"mid",time:Date.now()}as ChatMessage]),{
-                encoding: FileSystem.EncodingType.UTF8
-            });
-            return null;
-        }
-        const oldData = await FileSystem.readAsStringAsync(path, {
-            encoding: FileSystem.EncodingType.UTF8
-        });
-        const parsedData = JSON.parse(oldData);
-        await FileSystem.writeAsStringAsync(path, JSON.stringify([...parsedData, msg]), {
-            encoding: FileSystem.EncodingType.UTF8
-        });
-        return true;
-    } catch(err) {
-        console.log("char not added\n",err)
-        return false;
-    }
-};
-export const readChat = async(uid:string):Promise<ChatMessage[]|null>=>{
-    const {path,exist} = await pthEx(uid);
-    try{
-        if (exist) return null;
-        const data = await FileSystem.readAsStringAsync(path, {
-                  encoding: FileSystem.EncodingType.UTF8,
-                });
-        return JSON.parse(data || '[]') as ChatMessage[];
-    }
-    catch(err){
-        console.log("char not readed\n",err)
+export const addChat = (uid:string,msg:ChatMessage|null):void|null =>{
+    const exs = stor.getString(uid);
+    if(exs){
+        setTimeout(()=>stor.set(uid,`[${exs.slice(1,-1)}${msg}]`),500)
+    }else{
+        stor.set(uid,JSON.stringify([msg??{msg:"INIT",yar:'mid',time:Date.now()}]))
         return null
     }
-}
-export const rmChat = async(uid:string):Promise<boolean>=>{
-    const {path,exist} = await pthEx(uid);
-    try{
-        if (exist) return false;
-        await FileSystem.deleteAsync(path);
-        return true;
-    }
-    catch(err){
-        console.log("char not deleted\n",err)
-        return false
-    }
+};
+export const readChat = (uid:string):ChatMessage[]=>JSON.parse(stor.getString(uid) ?? '[]') as ChatMessage[]
+export const rmChat = (uid:string):void=>{
+    readChat(uid).map(msg=>msg.uri&&FileSystem.deleteAsync(msg.uri).catch(_e=>{}))
+    stor.delete(uid)
 }
 export const splitSend = async(file: FileInfo, send: SendChunk): Promise<boolean> => {
     const { uri, name, size } = file;
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) return false;
-    const occ = enc.encode(JSON.stringify({ d: '', i: Number.MAX_SAFE_INTEGER, s: size, n: name })).length;
-    const CHUNK_SIZE = 1024 * 12 - occ;
-    const totalChunks = Math.ceil(size / CHUNK_SIZE);
+    const occ = enc.encode(JSON.stringify({d:'',i:Math.ceil(size/16384),s:Math.ceil(size/16384), n: name })).byteLength;
+    let cSize = 16384 - occ;
+    let totalChunks = Math.ceil(size / cSize);
     for (let i = 0; i < totalChunks; i++) {
-        const start = i * CHUNK_SIZE, end = Math.min(start + CHUNK_SIZE, size);
+        const start = i * cSize;
+        const end = Math.min(start + cSize, size);
         try {
             const chunk = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64, position: start, length: end - start });
             const payload = JSON.stringify({ d: chunk, i, s: totalChunks, n: name });
-            if (enc.encode(payload).length > 1024 * 16){
-                console.log(1024*16 - enc.encode(payload).length)
-                return false;
+            if (enc.encode(payload).byteLength > 16384){
+                cSize = enc.encode(payload).byteLength - 16384;
+                i--;
+                continue;
             }
             send(payload);
         } catch(e){

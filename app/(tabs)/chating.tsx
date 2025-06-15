@@ -1,6 +1,5 @@
-import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal, Image, Dimensions, Pressable} from 'react-native'
-import { useEffect,useState,useRef,useLayoutEffect,} from "react";
-import * as clip from 'expo-clipboard';
+import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal, Image, Dimensions,} from 'react-native'
+import { useEffect,useState,useRef,useLayoutEffect, useCallback,} from "react";
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedInput } from '@/components/ThemedInput';
@@ -18,10 +17,11 @@ import axios from 'axios';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as DocumentPicker from 'expo-document-picker';
 import { peer,P2P } from '@/constants/webrtc';
-import Vid from '@/components/Vid';
-import Aud from '@/components/Aud';
+import {Vid} from '@/components/Vid';
+import {Aud} from '@/components/Aud';
 import Alert, { AlertProps } from '@/components/Alert';
 import { useFileProgress } from '@/components/Prog';
+import { ChatBuble } from '@/components/ChatBuble';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
@@ -49,10 +49,10 @@ export default function Chating() {
     useEffect(() => {
         AsyncStorage.getItem("uid").then(e=>e ?? '').then(syar);
         ScreenCapture.preventScreenCaptureAsync();
-        readChat(uid).then(m=>smgs(m??[]))
+        smgs(readChat(uid))
         socket.on('msg',(_msg)=>{
             try{
-                setTimeout(async()=>smgs((await readChat(uid))||[]),300);
+                setTimeout(async()=>smgs(readChat(uid)),100);
             }catch(e:any){
                 salrt(p=>({...p,vis:true,title:'file read error',discription:`${e.message}`,button:[{txt:"ok"}]}))
             }
@@ -72,8 +72,8 @@ export default function Chating() {
         if(!txt.trim())return;
         const msg = {msg:txt.trim(),yar,time:Date.now()} as ChatMessage
         socket.emit('chat',uid,msg);
-        await addChat(uid,msg)
-        readChat(uid).then(m=>smgs(m??[]))
+        addChat(uid,msg)
+        smgs(readChat(uid))
         stxt('');
     }
     const changeNam = async ()=>{
@@ -97,8 +97,8 @@ export default function Chating() {
                 sfile(result.assets)
                 sfileSta('PRE')
             } 
-        } catch (error) {
-                salrt(p=>({...p,vis:true,title:'Error picking files',discription:`${error.message}`,button:[{txt:"ok"}]}))
+        } catch (error:any) {
+            salrt(p=>({...p,vis:true,title:'Error picking files',discription:`${error.message}`,button:[{txt:"ok"}]}))
         }
     };
     const shoFls = ({item}:{item:DocumentPicker.DocumentPickerAsset}) =>{
@@ -119,8 +119,8 @@ export default function Chating() {
         if (!exists) await RNFS.mkdir(path);
         path = `${path}-${filename}`
         await RNFS.copyFile(uri,path);
-        await addChat(uid,{uri:path,yar,time:Date.now()});
-        smgs((await readChat(uid))??[])
+        addChat(uid,{uri:path,yar,time:Date.now()});
+        smgs(readChat(uid))
     }
     const sendFls = async () => {
         if (!file.length) return;
@@ -130,7 +130,7 @@ export default function Chating() {
                 salrt(p=>({...p,vis:true,title:'file size not founded',discription:`skiped :${f.name}`,button:[{txt:'retry'}]}))
                 continue;
             }
-            const res = await splitSend({name:f.name,uri:f.uri,size:f.size},dc.send.bind(dc));
+            const res = await splitSend({name:`${Date.now()}-${Math.round(Math.random()* 1E9 )}-${f.name}`,uri:f.uri,size:f.size},dc.send.bind(dc));
             if (res) {
                 await cpUri(f.uri,f.name);
             }else{
@@ -192,35 +192,9 @@ export default function Chating() {
                 sfileSta('ON')
             })
     }
-    const getType = (uri:string,mimeType:string)=>{
-        if(mimeType) return mimeType.split('/')[0];
-        const ext = uri.split('.').pop()?.toLowerCase();
-        if (!ext) return 'unknown';
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
-        if (['mp4', 'mov', 'mkv', 'webm'].includes(ext)) return 'video';
-        if (['mp3', 'wav', 'aac', 'm4a', 'ogg'].includes(ext)) return 'audio';
-        return 'unknown';
-    
-    }
-    const chtFls=(uri:string)=>{
-        switch(getType(uri,'')){
-            case 'image':
-                return(<ThemedView style={{width:width/2-3, aspectRatio:1}}><Image source={{uri}} resizeMode='contain' style={{height:'100%',width:'100%'}} /></ThemedView>)
-            case 'video':
-                return(<ThemedView style={{width:width/2-3, aspectRatio:1,justifyContent:'center',alignItems:'center'}}><Vid uri={uri}/></ThemedView>)
-            case 'audio':
-                return(<ThemedView style={{ width:width/2-3,justifyContent:'center',alignItems:'center' }}><Aud uri={uri}/></ThemedView>)
-            default:
-                return(<ThemedView style={{width:width/2-3,justifyContent:'center',alignItems:'center'}}><ThemedText>{uri.replace(RNFS.ExternalStorageDirectoryPath,'')}</ThemedText></ThemedView>)
-        }
-    }
-    const rendMsg = ({item}:{item:ChatMessage})=>(<Pressable style={{width:"100%"}} onLongPress={()=>{clip.setStringAsync(item.msg ?? item.uri ?? 'null')}}>
-        <ThemedView style={[style.msg,{alignSelf:item.yar==yar?"flex-end":item.yar=='mid'?'center':'flex-start'},{borderColor}]}>
-        {item.msg&&<ThemedText>{item.msg}</ThemedText>}
-        {item.uri && chtFls(item.uri)}
-        <ThemedText type='mini' style={{alignSelf:item.yar == 'mid'?'center':item.yar==yar?'flex-start':'flex-end'}}>{new Date(item.time).toLocaleString()}</ThemedText>
-        </ThemedView>
-    </Pressable>)
+    const rendMsg = useCallback(({item}:{item:ChatMessage})=>(
+        <ChatBuble item={item} yar={yar} path={RNFS.ExternalStorageDirectoryPath} />
+    ),[])
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -245,6 +219,10 @@ export default function Chating() {
                         data={msgs}
                         keyExtractor={(item,index) => item?.yar+index}
                         renderItem={rendMsg}
+                        initialNumToRender={20}
+                        maxToRenderPerBatch={10}
+                        windowSize={7}
+                        removeClippedSubviews
                         onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}
                         onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
                     />
@@ -262,10 +240,10 @@ export default function Chating() {
                         <ThemedView style={[style.textArea,{borderColor}]} >
                             <ThemedInput style={style.inputfield} placeholder='Tyye...' value={txt} onChangeText={stxt} />
                             <TouchableOpacity style={style.sendbtn} onPress={pikFls} >
-                                    <MaterialIcons name="attach-file" size={24} color={borderColor}/>
+                                <MaterialIcons name="attach-file" size={24} color={borderColor}/>
                             </TouchableOpacity>
                             <TouchableOpacity style={style.sendbtn} onPress={sendMsg} >
-                                    <MaterialIcons name="send" size={24} color={borderColor}/>
+                                <MaterialIcons name="send" size={24} color={borderColor}/>
                             </TouchableOpacity>
                         </ThemedView>
                     </ThemedView>
@@ -280,7 +258,7 @@ export default function Chating() {
                             </TouchableOpacity>
                         </ThemedView>
                     </Modal>
-<Alert {...alrt}/>
+                    <Alert {...alrt}/>
                 </ThemedView>
             </TouchableWithoutFeedback>
         </SafeAreaView>
@@ -315,15 +293,6 @@ const style = StyleSheet.create({
     },
     inputfield:{
         flex:0.95,
-    },
-    msg:{
-        flex:1,
-        alignItems:'center',
-        justifyContent:"center",
-        maxWidth:'55%',
-        padding:7,
-        borderRadius:15,
-        borderWidth:1,
     },
     calBtn:{
         height:'10%',

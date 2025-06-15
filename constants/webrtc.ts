@@ -180,6 +180,7 @@ export class P2P{
 
     static waitForConnection(peer:RTCPeerConnection):Promise<void>{
         return new Promise((res,rej)=>{
+            const timeOut = setTimeout(()=>{peer.removeEventListener('iceconnectionstatechange',ckSta); rej(new Error('Time Out'));},20000);
             const ckSta = ()=>{
                 if([ 'connected','completed'].includes(peer.iceConnectionState)){
                     clearTimeout(timeOut);
@@ -192,7 +193,6 @@ export class P2P{
                 }
             }
             peer.addEventListener('iceconnectionstatechange',ckSta);
-            const timeOut = setTimeout(()=>{peer.removeEventListener('iceconnectionstatechange',ckSta); rej(new Error('Time Out'));},20000);
             ckSta();
         });
     }

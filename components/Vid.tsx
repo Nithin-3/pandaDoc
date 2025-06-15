@@ -3,12 +3,12 @@ import { StyleSheet,} from 'react-native';
 import { ThemedView } from './ThemedView';
 import {useIsFocused} from '@react-navigation/native'
 import {InView} from 'react-native-intersection-observer'
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 type VidProps = {
     uri: string;
 };
 
-export default function Vid({ uri}: VidProps) {
+export const Vid:React.FC<VidProps> = ({uri}) => {
     const player = useVideoPlayer(uri);
     const foc = useIsFocused();
     useEffect(()=>{

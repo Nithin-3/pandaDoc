@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {useFileProgress} from '@/components/Prog';
 import { FlatList, TouchableOpacity, StyleSheet, Modal, SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -102,11 +102,11 @@ const ChatContactsScreen = () => {
                     const dow = RNFS.downloadFile({fromUrl:`http://192.168.20.146:3030/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`,toFile:path,discretionary:true,cacheable:true,begin:()=>{
                         setFileStatus(yar[0],{name:yar[1].split('°').pop()??'Downloading'})
                     },progress:rs=>{
-                        setFileStatus(yar[0],{prog:(rs.bytesWritten/rs.contentLength * 100).toFixed(2)})
+                            setFileStatus(yar[0],{prog:(rs.bytesWritten/rs.contentLength * 100).toFixed(2)})
                         },progressDivider:5})
                     const res = await dow.promise;
                     if(res.statusCode === 200){
-                        await addChat(yar[0],{uri:path,yar:yar[0],time:Date.now()});
+                        addChat(yar[0],{uri:path,yar:yar[0],time:Date.now()});
                         axios.delete(`http://192.168.20.146:3030/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`)
                         setContacts(p=>moveToFirst(p??[],yar[0]));
                         setFileStatus(yar[0],{name:'',prog:''})
@@ -125,15 +125,15 @@ const ChatContactsScreen = () => {
         })
         socket.on('msg', async (msg) => {
             if(msg.time){
-            if((await addChat(msg.yar,msg)) === null) {
-                const newContact = {
-                    id: msg.yar ,
-                    name: "unknown",
-                };
-                setContacts(p=>[newContact,...p??[]]);
-            }else{
-                setContacts(p=>moveToFirst(p??[],msg.yar))
-            }}
+                if(addChat(msg.yar,msg) === null) {
+                    const newContact = {
+                        id: msg.yar ,
+                        name: "unknown",
+                    };
+                    setContacts(p=>[newContact,...p??[]]);
+                }else{
+                    setContacts(p=>moveToFirst(p??[],msg.yar))
+                }}
         });
         return ()=>{
             showSubscription.remove();
@@ -161,7 +161,7 @@ const ChatContactsScreen = () => {
     }
     const vis = () => setModalVisible(p=>!p)
     function moveToFirst(arr: Contact[], targetId: string): Contact[] {
-    const index = arr.findIndex(item => item.id === targetId);
+        const index = arr.findIndex(item => item.id === targetId);
         if (index > -1) {
             const updated = [...arr];
             const [item] = updated.splice(index, 1);
@@ -184,7 +184,7 @@ const ChatContactsScreen = () => {
     };
     const addContact = async () => {
         if (!name.trim()) return;
-        const index = contacts?.findIndex(item => item.id === uid) || -1;
+        const index = contacts?.findIndex(item => item.id === uid) ?? -1;
         if(-1 < index){
             salrt(p=>({...p,vis:true,title:`uid alredy exist in ${contacts[index]?.name}`,discription:"Are you sure you want to rewrite this contact?",button:[
                 {
@@ -205,7 +205,8 @@ const ChatContactsScreen = () => {
     };
     const deleteContact = async (contactId:string) => {
         const updatedContacts = contacts?.filter((contact) => contact.id !== contactId);
-        rmChat(contactId).then(()=>setContacts(updatedContacts?? contacts))
+        rmChat(contactId)
+        setContacts(updatedContacts??contacts);
     };
     const showDeleteAlert = (contactId:string) => {
         salrt(p=>({...p,vis:true,title:'Delete Contact',discription:'Are you sure you want to delete this contact?',button:[
@@ -213,27 +214,25 @@ const ChatContactsScreen = () => {
             {txt:'Delete',onPress:() => deleteContact(contactId)}
         ]}))
     };
-    const renderSwipeableContact = ({ item }: { item: Contact }) => (
-    <Swipeable
-        renderRightActions={() => (
+    const Cont = React.memo(({ item }: { item: Contact }) => (
+        <Swipeable renderRightActions={() => (
             <TouchableOpacity style={[styles.deleteButton,{backgroundColor:borderColor}]} onPress={() => showDeleteAlert(item.id)}>
                 <ThemedText style={styles.deleteButtonText} lightColor="#ECEDEE" darkColor="#000000">Delete</ThemedText>
-            </TouchableOpacity>
-        )}>
-        <TouchableOpacity onPress={()=>{setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:0}:v))); 
+            </TouchableOpacity>)}>
+            <TouchableOpacity onPress={()=>{setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:0}:v))); 
                 nav.navigate('chating',{uid:item.id,nam:item.name,});}} onLongPress={() => showDeleteAlert(item.id)} style={styles.contactItem}>
                 <ThemedText style={styles.contactName}>{item.name} {item.new?`(${item.new})`:''}</ThemedText>
                 <ThemedText style={styles.contactUuid}>{item.id}</ThemedText>
                 {fileMap[item.id]?.prog &&(<>
                     <ThemedText type="mini">{fileMap[item.id].name}</ThemedText>
                     <ThemedView style={{height:3}}>
-                        <ThemedView style={{width:`${Number(fileMap[uid]?.prog ?? '0')}%`,height:'100%',backgroundColor:borderColor}}/>
+                        <ThemedView style={{width:`${Number(fileMap[item.id]?.prog ?? '0')}%`,height:'100%',backgroundColor:borderColor}}/>
                     </ThemedView></>)}
-        </TouchableOpacity>
-    </Swipeable>
-);
+            </TouchableOpacity>
+        </Swipeable>
+    ));
 
-        return (
+    return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
             <GestureHandlerRootView>
                 <ThemedView style={styles.container}>
@@ -245,7 +244,7 @@ const ChatContactsScreen = () => {
                     <TouchableOpacity style={styles.uid} onLongPress={()=>{clipbord.setStringAsync(yar)}}>
                         <ThemedText type="link">{yar}</ThemedText>
                     </TouchableOpacity>
-                    <FlatList data={contacts} keyExtractor={(item) => item.id} renderItem={renderSwipeableContact}/>
+                    <FlatList data={contacts} keyExtractor={(item) => item.id} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7} removeClippedSubviews renderItem={({item})=><Cont item={item}/>}/>
                     <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={vis}>
                         <TouchableWithoutFeedback onPress={()=>{isKeyboardVisible?Keyboard.dismiss():vis()}}>
                             <ThemedView style={styles.modalContainer}>
