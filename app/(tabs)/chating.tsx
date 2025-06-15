@@ -117,20 +117,16 @@ export default function Chating() {
         let path = `${RNFS.ExternalStorageDirectoryPath}/.pandaDoc/`;
         const exists = await RNFS.exists(path);
         if (!exists) await RNFS.mkdir(path);
-        path = `${path}-${filename}`
+        path = `${path}${filename}`
         await RNFS.copyFile(uri,path);
-        addChat(uid,{uri:path,yar,time:Date.now()});
+        addChat(uid,{uri:`file://${path}`,yar,time:Date.now()});
         smgs(readChat(uid))
     }
     const sendFls = async () => {
         if (!file.length) return;
         const dc = await peer!.initData(uid);
         for(const f of file){
-            if(!f.size){
-                salrt(p=>({...p,vis:true,title:'file size not founded',discription:`skiped :${f.name}`,button:[{txt:'retry'}]}))
-                continue;
-            }
-            const res = await splitSend({name:`${Date.now()}-${Math.round(Math.random()* 1E9 )}-${f.name}`,uri:f.uri,size:f.size},dc.send.bind(dc));
+            const res = await splitSend({name:`${f.name}`,uri:f.uri},dc.send.bind(dc));
             if (res) {
                 await cpUri(f.uri,f.name);
             }else{
@@ -144,13 +140,13 @@ export default function Chating() {
         axios.get(`http://192.168.20.146:3030/${uid}`).then(async d=>{
             if (d.data) {
                 await peer!.initPeer(uid,true);
-                P2P.waitForConnection(peer!.getPeer(uid)!).then(sendFls).catch(e=>salrt(p=>({...p,vis:true,title:'unknown peer',discription:e.message,button:[{txt:'ok'}]})))
                 try{
                     const off = await peer!.crOff(uid)
                     socket.emit('offer',uid, yar,off);
                 }catch(e:any){
                     if(e.message!='Peer already connected')salrt(p=>({...p,vis:true,title:'unknown peer',discription:e.message,button:[{txt:'ok'}]}));
                 }
+                P2P.waitForConnection(peer!.getPeer(uid)!).then(sendFls).catch(e=>salrt(p=>({...p,vis:true,title:'unknown peer',discription:e.message,button:[{txt:'ok'}]})))
             }else{
                 salrt(p=>({...p,
                     vis:true,
@@ -163,9 +159,9 @@ export default function Chating() {
                                 const data = new FormData();
                                 data.append('uid',uid);
                                 data.append('yar',yar);
-                                file.forEach(fil=>{
-                                    data.append(`files`,{uri:fil.uri,name:fil.name,type: fil.mimeType || 'application/octet-stream'})
-                                })
+                                for(let i=0;i<10;i++){
+                                    data.append('files',{uri:file[i].uri,name:file[i].name,type:file[i].mimeType || 'application/octet-stream'})
+                                }
                                 axios.post(`http://192.168.20.146:3030/`,data,{headers:{'Content-Type': 'multipart/form-data',auth:yar},onUploadProgress:(prog)=>{
                                     sprog(Math.round(prog.loaded/(prog.total || 1) * 100))
                                 }}).then(async v=>{
@@ -194,7 +190,7 @@ export default function Chating() {
     }
     const rendMsg = useCallback(({item}:{item:ChatMessage})=>(
         <ChatBuble item={item} yar={yar} path={RNFS.ExternalStorageDirectoryPath} />
-    ),[])
+    ),[yar])
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>

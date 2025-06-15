@@ -11,7 +11,7 @@ import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
 import socket, { init } from '@/constants/Socket';
-import {addChat,rmChat,addChunk,writeFunction, ChunkMessage,} from '@/constants/file';
+import {addChat,rmChat,addChunk,writeFunction,} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
@@ -34,6 +34,7 @@ const ChatContactsScreen = () => {
     const [alrt,salrt] = useState<AlertProps>({vis:false,setVis:()=>{salrt(p=>({...p, vis:false,title:'',discription:'',button:[]}))},title:'',discription:'',button:[]});
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const peer = useRef<P2P|null>(null);
+    const dow = new Map<string,writeFunction>();
     const nav = useNavigation();
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     useLayoutEffect(()=>{
@@ -57,13 +58,24 @@ const ChatContactsScreen = () => {
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
         const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {setIsKeyboardVisible(false);});
         init();
-        let datAdd:(c:ChunkMessage,p:string)=>void;
-        (async()=>{
-            datAdd = await flsAdd();
-        })();
         peer.current = new P2P({
-            onData:(data,peerId)=>{
-                datAdd(JSON.parse(data),peerId);
+            onDatOpen:async (peerId)=>{
+                const path = `${RNFS.ExternalStorageDirectoryPath}/.pandaDoc/`;
+                const exists = await RNFS.exists(path);
+                if (!exists) await RNFS.mkdir(path);
+                dow.set(peerId,(await addChunk(path)));
+            },
+            onData:async (data,peerId)=>{
+                const res = await dow.get(peerId)?.(data)
+                if(typeof res === 'string'){
+                    addChat(peerId,{uri:`file://${res}`,yar:peerId,time:Date.now()});
+                    dow.delete(peerId);
+                    setFileStatus(peerId,{prog:'',name:''});
+                }else if(res == -1){
+                    // failed
+                }else{
+                    setFileStatus(peerId,{prog:res?.toFixed(1)})
+                }
             },
             onDatClose:(peerId)=>{
                 peer.current?.close(peerId)
@@ -106,7 +118,7 @@ const ChatContactsScreen = () => {
                         },progressDivider:5})
                     const res = await dow.promise;
                     if(res.statusCode === 200){
-                        addChat(yar[0],{uri:path,yar:yar[0],time:Date.now()});
+                        addChat(yar[0],{uri:`file://${path}`,yar:yar[0],time:Date.now()});
                         axios.delete(`http://192.168.20.146:3030/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`)
                         setContacts(p=>moveToFirst(p??[],yar[0]));
                         setFileStatus(yar[0],{name:'',prog:''})
@@ -142,23 +154,6 @@ const ChatContactsScreen = () => {
         }
     }, []);
 
-    const flsAdd = async()=>{
-        const path = `${RNFS.ExternalStorageDirectoryPath}/.pandaDoc/`;
-        const exists = await RNFS.exists(path);
-        if (!exists) await RNFS.mkdir(path);
-        const fls = new Map<string, writeFunction>();
-        return (chunk:ChunkMessage,peerId:string)=>{
-            if(!fls.has(chunk.n)) fls.set( chunk.n, addChunk(path));
-            const res = fls.get(chunk.n)?.(chunk);
-            setFileStatus(peerId,{prog:(chunk.i/chunk.s).toFixed(1),name:chunk.n});
-            if(typeof res === 'string'){
-                addChat(peerId,{uri:res,yar:peerId,time:Date.now()});
-                fls.delete(chunk.n);
-                setFileStatus(peerId,{prog:'',name:''});
-            }
-        }
-
-    }
     const vis = () => setModalVisible(p=>!p)
     function moveToFirst(arr: Contact[], targetId: string): Contact[] {
         const index = arr.findIndex(item => item.id === targetId);

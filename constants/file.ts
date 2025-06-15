@@ -5,30 +5,22 @@ const stor = new MMKV({id:'cht'});
 interface FileInfo {
   uri: string;
   name: string;
-  size: number;
 }
-export interface ChunkMessage {
-  d: string;
-  i: number;
-  s: number;
-  n: string;
-}
-
 type SendChunk = (data: string) => void;
-export type writeFunction = (chunk:ChunkMessage) => string|boolean;
+export type writeFunction = (chunk:string) => Promise<string|number>;
 export type ChatMessage = {
-      msg?: string;
+    msg?: string;
     uri?:string;
     time:number;
-      yar: string;
+    yar: string;
 };
 export const addChat = (uid:string,msg:ChatMessage|null):void|null =>{
     const exs = stor.getString(uid);
     if(exs){
-        setTimeout(()=>stor.set(uid,`[${exs.slice(1,-1)}${msg}]`),500)
+        stor.set(uid,`[${exs.slice(1, -1)},${JSON.stringify(msg)}]`);
     }else{
-        stor.set(uid,JSON.stringify([msg??{msg:"INIT",yar:'mid',time:Date.now()}]))
-        return null
+        stor.set(uid,JSON.stringify([msg??{msg:"INIT",yar:'mid',time:Date.now()}]));
+        return null;
     }
 };
 export const readChat = (uid:string):ChatMessage[]=>JSON.parse(stor.getString(uid) ?? '[]') as ChatMessage[]
@@ -36,52 +28,63 @@ export const rmChat = (uid:string):void=>{
     readChat(uid).map(msg=>msg.uri&&FileSystem.deleteAsync(msg.uri).catch(_e=>{}))
     stor.delete(uid)
 }
-export const splitSend = async(file: FileInfo, send: SendChunk): Promise<boolean> => {
-    const { uri, name, size } = file;
-    const fileInfo = await FileSystem.getInfoAsync(uri);
-    if (!fileInfo.exists) return false;
-    const occ = enc.encode(JSON.stringify({d:'',i:Math.ceil(size/16384),s:Math.ceil(size/16384), n: name })).byteLength;
-    let cSize = 16384 - occ;
-    let totalChunks = Math.ceil(size / cSize);
-    for (let i = 0; i < totalChunks; i++) {
-        const start = i * cSize;
-        const end = Math.min(start + cSize, size);
-        try {
-            const chunk = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64, position: start, length: end - start });
-            const payload = JSON.stringify({ d: chunk, i, s: totalChunks, n: name });
-            if (enc.encode(payload).byteLength > 16384){
-                cSize = enc.encode(payload).byteLength - 16384;
-                i--;
-                continue;
+const MAX_SIZE = 16000;
+type meta = {
+    N:'st'|'en';
+    s?:number;
+    n?:string;
+}
+export const splitSend = async (file: FileInfo, send: SendChunk): Promise<boolean> => {
+    const { uri, name,} = file;
+    try {
+        const fileInfo = await FileSystem.getInfoAsync(uri);
+        if (!fileInfo.exists) throw new Error('File not found');
+        const bin = Buffer.from(await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 }), 'base64');
+        const size = bin.length
+        const met = JSON.stringify({ s: size, n: name, N: 'st' });
+        if (enc.encode(met).byteLength > MAX_SIZE) throw new Error('Large File Name');
+        send(met);
+        let i = 0, s = 0;
+        while (s < size) {
+            s = i + MAX_SIZE;
+            if (s > size) {
+                s = size;
             }
-            send(payload);
-        } catch(e){
-            console.warn(e)
-            return false;
+            send(bin.slice(i, s).toString('base64'));
+            i = s;
+            await new Promise(res => setTimeout(res, 10));
         }
+        send('{"N":"en"}');
+        return true;
+    } catch {
+        return false;
     }
-    return true;
 };
+
 export const addChunk = (path: string): writeFunction => {
-    const fileMap = new Map<number, string>();
-    let fsize = 0, fname = '';
-    return (chunk: ChunkMessage):string | boolean => {
-        const { d, s, n, i } = chunk;
-        fileMap.set(i, d);
-        fsize = s;
-        fname = n;
-        if (fileMap.size !== fsize) return true;
-        const order: string[] = [];
-        for (let i = 0; i < fsize; i++) {
-            const part = fileMap.get(i);
-            if (!part) return false;
-            order.push(part);
+    let fileMap: string[] = [];
+    let fsize = 0, fname = '', dow = 0;
+    return async (chunk: string):Promise<string|number> => {
+        try {
+            const met = JSON.parse(chunk) as meta;
+            switch (met.N) {
+                case 'st':
+                    fsize = met.s??0;
+                    fname = met.n??'';
+                    dow = 0;
+                    fileMap=[];
+                    return 0;
+                case 'en':
+                    if (fsize !== dow) return -1;
+                    const bin = fileMap.join('');
+                    await FileSystem.writeAsStringAsync(`${path}${fname}`, bin, { encoding: FileSystem.EncodingType.Base64 });
+                    return `${path}${fname}`;
+            }
+        } catch {
+            fileMap.push(chunk);
+            dow += chunk.length;
+            return dow/fsize*100;
         }
-        const base64 = order.join('');
-        const fullPath = `${path}${fname}`;
-        FileSystem.writeAsStringAsync(fullPath, base64, { encoding: FileSystem.EncodingType.Base64 });
-        fileMap.clear();
-        return fullPath;
     };
 };
 

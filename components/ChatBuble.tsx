@@ -14,7 +14,7 @@ interface ChatBubleProps{
     yar:string;
     path:string;
 }
-export const ChatBuble: React.FC<ChatBubleProps>=({item,yar,path})=>{
+export const ChatBuble = React.memo<ChatBubleProps>(({item,yar,path})=>{
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const {width} = Dimensions.get('window')
     const getType = (uri:string,mimeType:string)=>{
@@ -48,7 +48,15 @@ export const ChatBuble: React.FC<ChatBubleProps>=({item,yar,path})=>{
             </ThemedView>
         </Pressable>
     )
-}
+},
+  (prev, next) =>
+    prev.item.msg === next.item.msg &&
+    prev.item.uri === next.item.uri &&
+    prev.item.time === next.item.time &&
+    prev.item.yar === next.item.yar &&
+    prev.yar === next.yar &&
+    prev.path === next.path
+);
 const style = StyleSheet.create({
     msg:{
         flex:1,
