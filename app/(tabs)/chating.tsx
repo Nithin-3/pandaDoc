@@ -125,6 +125,10 @@ export default function Chating() {
     const sendFls = async () => {
         if (!file.length) return;
         const dc = await peer!.initData(uid);
+        if(!dc && dc.send){
+            console.log('no method');
+            return;
+        }
         for(const f of file){
             const res = await splitSend({name:`${f.name}`,uri:f.uri},dc.send.bind(dc));
             if (res) {

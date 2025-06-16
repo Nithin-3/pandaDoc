@@ -67,12 +67,12 @@ const ChatContactsScreen = () => {
             },
             onData:(data,peerId)=>{
                 dow.get(peerId)?.(data).then(res=>{
-                    console.log(res);
-                    if(typeof res === 'string'){
+                    if(typeof res == 'string'){
                         addChat(peerId,{uri:`file://${res}`,yar:peerId,time:Date.now()});
                         dow.delete(peerId);
                         setFileStatus(peerId,{prog:'',name:''});
                     }else if(res == -1){
+                        console.log('fail')
                         // failed
                     }else{
                         setFileStatus(peerId,{prog:res?.toFixed(1)})

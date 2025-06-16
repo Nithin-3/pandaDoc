@@ -76,7 +76,7 @@ export class P2P{
             stream.addTrack(e.track); 
         }
         if (dataChannel) {
-            const dataChannel = peer.createDataChannel('chat',{ordered:true, negotiated:true, id:3 });
+            const dataChannel = peer.createDataChannel('chat',{ordered:true});
             this.setDatChannel(dataChannel,peerId);
         } else {
             peer.ondatachannel = (event:any) => {
@@ -90,12 +90,13 @@ export class P2P{
 
     async initData(peerId:string){
         const dc = this.dataChannel.get(peerId);
-        return dc ?? this.setDatChannel(this.peer.get(peerId)?.createDataChannel('chat',{ordered:true, negotiated:true, id:3 })??await this.initPeer(peerId),peerId)
+        if(dc) return dc;
+        const peer = await this.initPeer(peerId);
+        return this.setDatChannel(peer.createDataChannel('chat',{ordered:true}),peerId)
     }
 
     private setDatChannel(chan:RTCDataChannel,peerId:string){
         chan.onopen = () => {
-            console.log('open chan',peerId)
             this.handlers.onDatOpen?.(peerId);
         };
 
@@ -108,7 +109,6 @@ export class P2P{
             console.error('[RTC] DataChannel error', e);
         };
         chan.onmessage = (e:any) => {
-            console.log('jfjf')
             this.handlers.onData?.(e.data,peerId);
         };
         this.dataChannel.set(peerId,chan)
@@ -191,8 +191,8 @@ export class P2P{
                 }
             }
             peer.addEventListener('iceconnectionstatechange',ckSta);
-            const timeOut = setTimeout(()=>{peer.removeEventListener('iceconnectionstatechange',ckSta); rej(new Error('Time Out'));},20000);
-            setTimeout(ckSta,300);
+            const timeOut = setTimeout(()=>{peer.removeEventListener('iceconnectionstatechange',ckSta); rej(new Error('Time Out'));},10000);
+            setTimeout(ckSta,3000);
         });
     }
 
