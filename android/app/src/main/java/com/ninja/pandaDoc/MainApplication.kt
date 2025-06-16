@@ -1,4 +1,4 @@
-package com.anonymous.pandaDoc
+package com.ninja.pandaDoc
 
 import android.app.Application
 import android.content.res.Configuration

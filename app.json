@@ -10,14 +10,14 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.pandaDoc"
+      "bundleIdentifier": "com.ninja.pandaDoc"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.anonymous.pandaDoc"
+      "package": "com.ninja.pandaDoc"
     },
     "web": {
       "bundler": "metro",

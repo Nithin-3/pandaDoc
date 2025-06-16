@@ -1,4 +1,4 @@
-package com.anonymous.pandaDoc
+package com.ninja.pandaDoc
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
