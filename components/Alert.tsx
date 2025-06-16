@@ -1,6 +1,7 @@
 import { Modal, TouchableOpacity, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export type Button = {
     txt: string;
@@ -16,14 +17,15 @@ export type AlertProps = {
 }
 
 export default function Alert({ vis, setVis, title, discription, button }: AlertProps) {
+    const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     return (
         <Modal visible={vis} transparent onRequestClose={() => setVis()}>
             <ThemedView style={styles.overlay}>
-                <ThemedView style={styles.alertBox}>
+                <ThemedView style={[styles.alertBox,{borderColor}]}>
                     <ThemedText style={styles.title}>{title}</ThemedText>
                     {discription && <ThemedText style={styles.description}>{discription}</ThemedText>}
                     <ThemedView style={styles.buttonView}>
-                        {button?.map((b, index) => (<TouchableOpacity key={index} onPress={()=>{b.onPress?.();setVis()}} style={styles.button}>
+                        {button?.map((b, index) => (<TouchableOpacity key={index} onPress={()=>{b.onPress?.();setVis()}} style={[styles.button,{borderColor}]}>
                             <ThemedText>{b.txt}</ThemedText>
                         </TouchableOpacity>))}
                     </ThemedView>
@@ -44,6 +46,7 @@ const styles = StyleSheet.create({
         width: 300,
         padding: 20,
         borderRadius: 10,
+        borderWidth:2,
         alignItems: 'center',
     },
     title: {
@@ -59,12 +62,14 @@ const styles = StyleSheet.create({
     button: {
         padding: 10,
         marginVertical: 5,
-        borderRadius: 5,
+        borderRadius: 15,
+        borderWidth:2,
         alignItems: 'center',
     },
     buttonView:{
         flexDirection:'row',
-        justifyContent:'space-evenly',
+        width:"100%",
+        justifyContent:'space-around',
         flexWrap:'wrap',
     }
 });

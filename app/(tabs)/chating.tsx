@@ -71,6 +71,7 @@ export default function Chating() {
     const sendMsg = async()=>{
         if(!txt.trim())return;
         const msg = {msg:txt.trim(),yar,time:Date.now()} as ChatMessage
+        flatlis.current?.scrollToEnd({animated:true});
         socket.emit('chat',uid,msg);
         addChat(uid,msg)
         smgs(readChat(uid))
@@ -141,7 +142,7 @@ export default function Chating() {
         socket.emit('msg',{yar:uid,time:undefined});
     };
     const preSndFls = ()=>{
-        axios.get(`http://192.168.20.146:3030/${uid}`).then(async d=>{
+        axios.get(`https://pandadoc.onrender.com/${uid}`).then(async d=>{
             if (d.data) {
                 await peer!.initPeer(uid,true);
                 try{
@@ -166,7 +167,7 @@ export default function Chating() {
                                 file.forEach((fil,i)=>{
                                     i<10&&data.append('files',{uri:fil.uri,name:fil.name,type:fil.mimeType || 'application/octet-stream'})
                                 })
-                                axios.post(`http://192.168.20.146:3030/`,data,{headers:{'Content-Type': 'multipart/form-data',auth:yar},onUploadProgress:(prog)=>{
+                                axios.post(`https://pandadoc.onrender.com/`,data,{headers:{'Content-Type': 'multipart/form-data',auth:yar},onUploadProgress:(prog)=>{
                                     sprog(Math.round(prog.loaded/(prog.total || 1) * 100))
                                 }}).then(async v=>{
                                         await Promise.all([sfile(p=>{
@@ -221,9 +222,8 @@ export default function Chating() {
                         renderItem={rendMsg}
                         initialNumToRender={20}
                         maxToRenderPerBatch={10}
-                        windowSize={7}
+                        windowSize={5}
                         removeClippedSubviews
-                        onContentSizeChange={() => flatlis.current?.scrollToEnd({ animated: true })}
                         onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
                     />
                     {fileMap[uid]?.prog &&(<>

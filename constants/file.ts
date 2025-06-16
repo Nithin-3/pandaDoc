@@ -42,7 +42,7 @@ export const splitSend = async (file: FileInfo, send: SendChunk): Promise<boolea
         if (!fileInfo.exists) throw new Error('File not found');
         const bin = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
         const size = bin.length
-        const met = JSON.stringify({ s: bin.length, n: name, N: 'st' });
+        const met = JSON.stringify({ s: bin.length, n: `${Date.now()}${Math.round(Math.random()*1E5)} ʕ•ᴥ•ʔ ${name}`, N: 'st' });
         if (enc.encode(met).byteLength > MAX_SIZE) throw new Error('Large File Name');
         send(met);
         let i = 0, s = 0;
@@ -53,7 +53,7 @@ export const splitSend = async (file: FileInfo, send: SendChunk): Promise<boolea
             }
             send(bin.slice(i, s));
             i = s;
-            await new Promise(res => setTimeout(res, 10));
+            await new Promise(res => setTimeout(res, 1));
         }
         send('{"N":"en"}' );
         return true;

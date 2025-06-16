@@ -113,7 +113,7 @@ const ChatContactsScreen = () => {
                     if (!exists) await RNFS.mkdir(path);
                     const yar = url.split('/')
                     path = `${path}/${yar[1]}`
-                    const dow = RNFS.downloadFile({fromUrl:`http://192.168.20.146:3030/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`,toFile:path,discretionary:true,cacheable:true,begin:()=>{
+                    const dow = RNFS.downloadFile({fromUrl:`https://pandadoc.onrender.com/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`,toFile:path,discretionary:true,cacheable:true,begin:()=>{
                         setFileStatus(yar[0],{name:yar[1].split('°').pop()??'Downloading'})
                     },progress:rs=>{
                             setFileStatus(yar[0],{prog:(rs.bytesWritten/rs.contentLength * 100).toFixed(2)})
@@ -121,7 +121,7 @@ const ChatContactsScreen = () => {
                     const res = await dow.promise;
                     if(res.statusCode === 200){
                         addChat(yar[0],{uri:`file://${path}`,yar:yar[0],time:Date.now()});
-                        axios.delete(`http://192.168.20.146:3030/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`)
+                        await axios.delete(`https://pandadoc.onrender.com/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`)
                         setContacts(p=>moveToFirst(p??[],yar[0]));
                         setFileStatus(yar[0],{name:'',prog:''})
                     }else{

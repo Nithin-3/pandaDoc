@@ -6,6 +6,7 @@ import { useNavigation } from 'expo-router';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import RNFS from 'react-native-fs';
 import  ManageExternalStorage  from 'react-native-external-storage-permission';
+import socket from '@/constants/Socket';
 export default function HomeScreen() {
     const nav = useNavigation();
     const [file, setfile] = useState<{ path: string; name: string }[]>([]);
@@ -15,6 +16,7 @@ export default function HomeScreen() {
     useEffect(() => {
         const unsubscribe = nav.addListener('focus', () => {
             sCht(false);
+            socket.emit('exit')
         });
         return unsubscribe;
     }, [nav]);
@@ -45,10 +47,11 @@ export default function HomeScreen() {
                 try {
                     const items = await RNFS.readDir(`${currentDir}`);
                     for (const item of items) {
-                        if (item.isFile() && item.name.match(/\.(pdf|docx|txt|xlsx|pptx|xml)$/i)) {
+                        if (item.isFile() && item.name.match(/\.(pdf|txt|xml|csv|json|html|md|log)$/i)) {
                             files.push({path:item.path,name:item.name});
                         } else if (item.isDirectory()) {
                             if (currentDir.includes('/Android')) continue;
+                            if (currentDir.includes('/.')) continue;
                             queue.push(item.path);
                         }
                     }
