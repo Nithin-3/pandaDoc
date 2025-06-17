@@ -38,41 +38,29 @@ export default function HomeScreen() {
         reqPer()
     }, []);
     const getFiles = async () => {
-        try {
-            const rootDir = RNFS.ExternalStorageDirectoryPath;
-            let files = [];
-            let queue = [rootDir];
-            while (queue.length > 0) {
-                const currentDir:String = queue.shift() || '';
-                try {
-                    const items = await RNFS.readDir(`${currentDir}`);
-                    for (const item of items) {
-                        if (item.isFile() && item.name.match(/\.(pdf|txt|xml|csv|json|html|md|log)$/i)) {
-                            files.push({path:item.path,name:item.name});
-                        } else if (item.isDirectory()) {
-                            if (currentDir.includes('/Android')) continue;
-                            if (currentDir.includes('/.')) continue;
-                            queue.push(item.path);
-                        }
-                    }
-                } catch (err) {
-                    console.error(currentDir, err);
+        const rootDir = RNFS.ExternalStorageDirectoryPath;
+        let files = [];
+        let queue = [rootDir];
+        while (queue.length > 0) {
+            const currentDir:String = queue.shift() || '';
+            const items = await RNFS.readDir(`${currentDir}`);
+            for (const item of items) {
+                if (item.isFile() && item.name.match(/\.(pdf|txt|xml|csv|json|html|md|log)$/i)) {
+                    files.push({path:item.path,name:item.name});
+                } else if (item.isDirectory()) {
+                    if (currentDir.includes('/Android')) continue;
+                    if (currentDir.includes('/.')) continue;
+                    queue.push(item.path);
                 }
             }
-            files.length || files.push({path:"NA",name:"empty"}) 
-            setfile(files)
-
-        } catch (err) {
-            console.error('Error reading directory:', err);
         }
+        files.length || files.push({path:"NA",name:"empty"}) 
+        setfile(files)
+
     };
     const openFile=async(uri:string)=>{
         uri = `file://${uri}`
-        try {
             nav.navigate(uri.match(/\.(pdf)$/i) ? "pdf" : "doc", { uri });
-        } catch (error) {
-            console.error('Error opening file:', error);
-        }
 
     }
     const list = ({item}: { item: { path: string; name: string } })=>(
