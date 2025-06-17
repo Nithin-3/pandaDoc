@@ -139,12 +139,12 @@ const ChatContactsScreen = () => {
         })
         socket.on('msg', async (msg) => {
             if(msg.time){
-                if(addChat(msg.yar,msg) === null) {
+                if(addChat(msg.yar,msg)) {
                     const newContact = {
                         id: msg.yar ,
                         name: "unknown",
                     };
-                    setContacts(p=>[newContact,...p??[]]);
+                    setContacts(p=>[newContact,...(p??[])]);
                 }else{
                     setContacts(p=>moveToFirst(p??[],msg.yar))
                 }}

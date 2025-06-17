@@ -1,5 +1,5 @@
 import { io } from "socket.io-client";
-const SOCKET_URL = "http://192.168.20.146:3030";
+const SOCKET_URL = "wss://pandadoc.onrender.com/";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import uuid from "react-native-uuid";
 

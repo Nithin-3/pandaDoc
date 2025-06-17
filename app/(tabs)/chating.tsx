@@ -50,8 +50,9 @@ export default function Chating() {
         AsyncStorage.getItem("uid").then(e=>e ?? '').then(syar);
         ScreenCapture.preventScreenCaptureAsync();
         smgs(readChat(uid))
-        socket.on('msg',(_msg)=>{
+        socket.on('msg',(msg)=>{
             try{
+                msg.yar == uid &&
                 setTimeout(async()=>smgs(readChat(uid)),100);
             }catch(e:any){
                 salrt(p=>({...p,vis:true,title:'file read error',discription:`${e.message}`,button:[{txt:"ok"}]}))
@@ -63,9 +64,14 @@ export default function Chating() {
         }
     }, []);
     const rqCall = async(vid:boolean=false)=>{
-        socket.emit('rqcall',uid, yar,vid);
-        await peer!.stStrm(vid,uid);
-        nav.navigate('call', { uid, nam, cal: 'ON' });
+        const on = await axios.get(`https://pandadoc.onrender.com/${uid}`)
+        if(on.data){
+            socket.emit('rqcall',uid, yar,vid);
+            await peer!.stStrm(vid,uid);
+            nav.navigate('call', { uid, nam, cal: 'ON' });
+        }else{
+            salrt(p=>({...p,title:`${nam} is offline`,vis:true,button:[{txt:'call later'}]}))
+        }
     }
 
     const sendMsg = async()=>{
@@ -139,7 +145,7 @@ export default function Chating() {
             }
         }
         peer!.close(uid);
-        socket.emit('msg',{yar:uid,time:undefined});
+        socket.emit('chat',uid,{yar,time:undefined});
     };
     const preSndFls = ()=>{
         axios.get(`https://pandadoc.onrender.com/${uid}`).then(async d=>{

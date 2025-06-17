@@ -15,14 +15,14 @@ export type ChatMessage = {
     time:number;
     yar: string;
 };
-export const addChat = (uid:string,msg:ChatMessage|null):void|null =>{
+export const addChat = (uid:string,msg:ChatMessage|null):boolean=>{
     const exs = stor.getString(uid);
     if(exs){
         stor.set(uid,`[${exs.slice(1, -1)},${JSON.stringify(msg)}]`);
-    }else{
-        stor.set(uid,JSON.stringify([msg??{msg:"INIT",yar:'mid',time:Date.now()}]));
-        return null;
+        return false;
     }
+    stor.set(uid,JSON.stringify([msg??{msg:"INIT",yar:'mid',time:Date.now()}]));
+    return true;
 };
 export const readChat = (uid:string):ChatMessage[]=>JSON.parse(stor.getString(uid) ?? '[]') as ChatMessage[]
 export const rmChat = (uid:string):void=>{
