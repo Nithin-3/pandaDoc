@@ -14,6 +14,7 @@ export default function HomeScreen() {
     const [cht,sCht] = useState(false);
     const [vis,svis] = useState(false);
     useEffect(() => {
+        nav.setOptions({title:"DOCs"});
         const unsubscribe = nav.addListener('focus', () => {
             sCht(false);
             socket.emit('exit')
