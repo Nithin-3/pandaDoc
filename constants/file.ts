@@ -26,8 +26,8 @@ export const addChat = (uid:string,msg:ChatMessage|null):boolean=>{
 };
 export const readChat = (uid:string):ChatMessage[]=>JSON.parse(stor.getString(uid) ?? '[]') as ChatMessage[]
 export const rmChat = (uid:string):void=>{
-    readChat(uid).map(msg=>msg.uri&&FileSystem.deleteAsync(msg.uri).catch(_e=>{}))
     stor.delete(uid)
+    readChat(uid).map(msg=>msg.uri&&FileSystem.deleteAsync(msg.uri).catch(_e=>{}))
 }
 const MAX_SIZE = 16000;
 type meta = {

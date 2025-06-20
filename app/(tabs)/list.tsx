@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {useFileProgress} from '@/components/Prog';
-import { FlatList, TouchableOpacity, StyleSheet, Modal, SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
+import { FlatList, TouchableOpacity, StyleSheet, Modal, SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard, View} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedInput } from "@/components/ThemedInput";
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
+import { GestureHandlerRootView,} from "react-native-gesture-handler";
 import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
@@ -16,10 +16,11 @@ import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
 import Alert, { AlertProps } from "@/components/Alert";
+import Cont from "@/components/Cont"
 import axios from "axios";
 const CONTACTS_KEY = "chat_contacts";
 
-const ChatContactsScreen = () => {
+const list = () => {
     interface Contact {
         id: string;
         name: string;
@@ -27,6 +28,8 @@ const ChatContactsScreen = () => {
     }
     const {fileMap,setFileStatus} = useFileProgress();
     const [contacts, setContacts] = useState<Contact[] | null>(null);
+    const [block,sblock] = useState<string[]>([]);
+    const [tchLoc,stchLoc] = useState<{x:number,y:number}|null>(null);
     const [name, sname] = useState("");
     const [uid, suid] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
@@ -138,7 +141,7 @@ const ChatContactsScreen = () => {
             }))
         })
         socket.on('msg', async (msg) => {
-            if(msg.time){
+            if(msg.time && !block.includes(msg.yar)){
                 if(addChat(msg.yar,msg)) {
                     const newContact = {
                         id: msg.yar ,
@@ -211,23 +214,13 @@ const ChatContactsScreen = () => {
             {txt:'Delete',onPress:() => deleteContact(contactId)}
         ]}))
     };
-    const Cont = React.memo(({ item }: { item: Contact }) => (
-        <Swipeable renderRightActions={() => (
-            <TouchableOpacity style={[styles.deleteButton,{backgroundColor:borderColor}]} onPress={() => showDeleteAlert(item.id)}>
-                <ThemedText style={styles.deleteButtonText} lightColor="#ECEDEE" darkColor="#000000">Delete</ThemedText>
-            </TouchableOpacity>)}>
-            <TouchableOpacity onPress={()=>{setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:0}:v))); 
-                nav.navigate('chating',{uid:item.id,nam:item.name,});}} onLongPress={() => showDeleteAlert(item.id)} style={styles.contactItem}>
-                <ThemedText style={styles.contactName}>{item.name} {item.new?`(${item.new})`:''}</ThemedText>
-                <ThemedText style={styles.contactUuid}>{item.id}</ThemedText>
-                {fileMap[item.id]?.prog &&(<>
-                    <ThemedText type="mini">{fileMap[item.id].name}</ThemedText>
-                    <ThemedView style={{height:3}}>
-                        <ThemedView style={{width:`${Number(fileMap[item.id]?.prog ?? '0')}%`,height:'100%',backgroundColor:borderColor}}/>
-                    </ThemedView></>)}
-            </TouchableOpacity>
-        </Swipeable>
-    ));
+    const Conts = React.memo(({ item }: { item: Contact }) => {
+        const press = ()=>{
+            setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:0}:v))); 
+                nav.navigate('chating',{uid:item.id,nam:item.name,});
+        }
+        return <Cont contact={item} borderColor={borderColor} onDeletePress={()=>showDeleteAlert(item.id)} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''}/>
+    });
 
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
@@ -241,7 +234,7 @@ const ChatContactsScreen = () => {
                     <TouchableOpacity style={styles.uid} onLongPress={()=>{clipbord.setStringAsync(yar)}}>
                         <ThemedText type="link">{yar}</ThemedText>
                     </TouchableOpacity>
-                    <FlatList data={contacts} keyExtractor={(item) => item.id} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7} removeClippedSubviews renderItem={({item})=><Cont item={item}/>}/>
+                    <FlatList data={contacts} keyExtractor={(item) => item.id} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7} removeClippedSubviews renderItem={({item})=><Conts item={item}/>}/>
                     <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={vis}>
                         <TouchableWithoutFeedback onPress={()=>{isKeyboardVisible?Keyboard.dismiss():vis()}}>
                             <ThemedView style={styles.modalContainer}>
@@ -277,20 +270,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     container: { flex: 1,},
-    contactItem: {
-        padding: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: "#ddd",
-    },
-    contactName: { fontSize: 18, fontWeight: "bold" },
-    contactUuid: { fontSize: 14, color: "gray" },
-    deleteButton: {
-        justifyContent: "center",
-        alignItems: "center",
-        width: 80,
-        marginVertical: 5,
-    },
-    deleteButtonText: {fontWeight: "bold" },
     modalContainer: {
         flex: 1,
         backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -325,5 +304,5 @@ const styles = StyleSheet.create({
     }
 });
 
-export default ChatContactsScreen;
+export default list;
 
