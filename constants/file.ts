@@ -3,6 +3,8 @@ import RNFS from 'react-native-fs'
 import {MMKV} from 'react-native-mmkv'
 const enc = new TextEncoder();
 const stor = new MMKV({id:'cht'});
+export const conty = new MMKV({id:'cnt'});
+export const blocks = new MMKV({id:'block'});
 interface FileInfo {
   uri: string;
   name: string;

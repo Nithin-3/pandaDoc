@@ -1,35 +1,32 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import {useFileProgress} from '@/components/Prog';
-import { FlatList, TouchableOpacity, StyleSheet, Modal, SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard, View} from "react-native";
+import { FlatList, TouchableOpacity, StyleSheet, Modal, SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedInput } from "@/components/ThemedInput";
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { GestureHandlerRootView,} from "react-native-gesture-handler";
 import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
 import socket, { init } from '@/constants/Socket';
-import {addChat,rmChat,addChunk,writeFunction,} from '@/constants/file';
+import {addChat,rmChat,addChunk,writeFunction,conty,blocks} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
 import Alert, { AlertProps } from "@/components/Alert";
-import Cont from "@/components/Cont"
+import Cont, { exp } from "@/components/Cont"
 import axios from "axios";
 const CONTACTS_KEY = "chat_contacts";
-
+interface Contact {
+    id: string;
+    name: string;
+    new?: number;
+}
 const list = () => {
-    interface Contact {
-        id: string;
-        name: string;
-        new?: number;
-    }
     const {fileMap,setFileStatus} = useFileProgress();
     const [contacts, setContacts] = useState<Contact[] | null>(null);
     const [block,sblock] = useState<string[]>([]);
-    const [tchLoc,stchLoc] = useState<{x:number,y:number}|null>(null);
     const [name, sname] = useState("");
     const [uid, suid] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
@@ -50,12 +47,13 @@ const list = () => {
         })
     },[nav])
     useEffect(() => {
-        (async()=>{
-            contacts && await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
-            sname("");
-            suid("");
-            setModalVisible(false);
-        })();
+        contacts && blocks.set(CONTACTS_KEY,JSON.stringify(block))
+    }, [block])
+    useEffect(() => {
+        contacts && conty.set(CONTACTS_KEY,JSON.stringify(contacts))
+        sname("");
+        suid("");
+        setModalVisible(false);
     }, [contacts])
     useEffect(() => {
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
@@ -66,7 +64,7 @@ const list = () => {
                 const path = `${RNFS.ExternalStorageDirectoryPath}/.pandaDoc/`;
                 const exists = await RNFS.exists(path);
                 if (!exists) await RNFS.mkdir(path);
-                dow.set(peerId,(await addChunk(path)));
+                dow.set(peerId,(addChunk(path)));
             },
             onData:(data,peerId)=>{
                 dow.get(peerId)?.(data).then(res=>{
@@ -171,7 +169,7 @@ const list = () => {
     }
     const loadContacts = async () => {
         try {
-            const storedContacts = await AsyncStorage.getItem(CONTACTS_KEY);
+            const storedContacts = conty.getString(CONTACTS_KEY);
             syar(await AsyncStorage.getItem('uid') || '');
             if (storedContacts) {
                 setContacts(JSON.parse(storedContacts));
@@ -203,28 +201,34 @@ const list = () => {
         addChat(uid,null);
         setContacts(p=>[newContact,...p??[]]);
     };
-    const deleteContact = async (contactId:string) => {
+    const deleteContact = (contactId:string) => {
         const updatedContacts = contacts?.filter((contact) => contact.id !== contactId);
         rmChat(contactId)
         setContacts(updatedContacts??contacts);
     };
-    const showDeleteAlert = (contactId:string) => {
-        salrt(p=>({...p,vis:true,title:'Delete Contact',discription:'Are you sure you want to delete this contact?',button:[
+    const blockContact = (contactId:string)=>{
+        sblock(p=>p.includes(contactId)?p.filter(id=>id!=contactId):[...p,contactId])
+    }
+    const showAlert = (contactId:string,ev:"Block"|"Delete") => {
+        const lable = ev==='Block' && block.includes(contactId)?'Un'+ev:ev;
+        salrt(p=>({...p,vis:true,title:`${lable} Contact`,discription:`Are you sure you want to ${lable} ${contacts?.filter(e=>e.id==contactId)[0].name}?`,button:[
             {txt:'cancel'},
-            {txt:'Delete',onPress:() => deleteContact(contactId)}
+            {txt:lable,onPress:() =>{
+                ev==="Delete"&&deleteContact(contactId)
+                ev==="Block"&& blockContact(contactId)
+            } }
         ]}))
     };
-    const Conts = React.memo(({ item }: { item: Contact }) => {
+    const Conts = ({item}: { item: Contact,index:number }) => {
         const press = ()=>{
-            setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:0}:v))); 
-                nav.navigate('chating',{uid:item.id,nam:item.name,});
+            setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:undefined}:v))); 
+            nav.navigate('chating',{uid:item.id,nam:item.name,});
         }
-        return <Cont contact={item} borderColor={borderColor} onDeletePress={()=>showDeleteAlert(item.id)} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''}/>
-    });
+        return <Cont borderColor={borderColor} onBlockPress={()=>showAlert(item.id,'Block')} onDeletePress={()=>showAlert(item.id,'Delete')} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''} blocked={block.includes(item.id)} contact={item} />
+    };
 
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
-            <GestureHandlerRootView>
                 <ThemedView style={styles.container}>
                     <ThemedView style={styles.eventArea} darkColor="#151718">
                         <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}><Ionicons name="arrow-back" size={28} color={borderColor} /></TouchableOpacity>
@@ -256,7 +260,6 @@ const list = () => {
                     </Modal>
                 </ThemedView>
                 <Alert {...alrt}/>
-            </GestureHandlerRootView>
         </SafeAreaView>
     );
 };

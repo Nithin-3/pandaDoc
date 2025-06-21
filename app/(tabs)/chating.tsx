@@ -12,7 +12,7 @@ import AntDesign from '@expo/vector-icons/AntDesign';
 import {MaterialIcons} from '@expo/vector-icons/';
 import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
-import {addChat,readChat,ChatMessage,splitSend} from '@/constants/file';
+import {addChat,readChat,ChatMessage,splitSend, conty} from '@/constants/file';
 import axios from 'axios';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as DocumentPicker from 'expo-document-picker';
@@ -86,7 +86,8 @@ export default function Chating() {
     const changeNam = async ()=>{
         sedit((prevEdit) => {
             if (prevEdit) {
-                AsyncStorage.getItem(CONTACTS_KEY).then((t) => JSON.parse(t||'[]')).then((c) =>c.map((v: { id: string; }) => (v.id == uid ? { ...v, name: titNam } : v))).then(async (C) => await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(C)));
+                const contact = JSON.parse(conty.getString(CONTACTS_KEY)||'[]');
+                conty.set(CONTACTS_KEY,JSON.stringify(contact.map((v: { id: string; }) => (v.id == uid ? { ...v, name: titNam } : v))));
             } else {
                 setTimeout(()=>title.current?.focus(),100)
             }
