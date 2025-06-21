@@ -232,7 +232,7 @@ const list = () => {
                 <ThemedView style={styles.container}>
                     <ThemedView style={styles.eventArea} darkColor="#151718">
                         <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}><Ionicons name="arrow-back" size={28} color={borderColor} /></TouchableOpacity>
-                        <ThemedText style={{fontSize:21,flex:0.8}}>chats</ThemedText>
+                        <ThemedText style={{flex:0.8}} type="title">chats</ThemedText>
                         <TouchableOpacity onPress={vis} style={{flex:0.1}}><Ionicons name="add" size={28} color={borderColor} /></TouchableOpacity>
                     </ThemedView>
                     <TouchableOpacity style={styles.uid} onLongPress={()=>{clipbord.setStringAsync(yar)}}>

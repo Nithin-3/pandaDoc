@@ -211,7 +211,7 @@ export default function Chating() {
                         <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}>
                             <AntDesign name="arrowleft" size={28} color={borderColor} />
                         </TouchableOpacity>
-                        <ThemedInput value={titNam} onChangeText={stitNam} placeholder="don't be empty..." ref={title} editable={edit} style={{fontSize:21,flex:0.8}}/>
+                        <ThemedInput value={titNam} onChangeText={stitNam} placeholder="don't be empty..." ref={title} editable={edit} style={{fontSize:32,fontWeight:'bold',flex:0.8}}/>
                         <TouchableOpacity onPress={changeNam} style={{flex:0.1,marginHorizontal:3}}>
                             <AntDesign name={edit?"check":"edit"} size={28} color={borderColor} />
                         </TouchableOpacity>

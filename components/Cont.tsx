@@ -67,7 +67,6 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
             <Animated.View {...panResponder.panHandlers} style={[{ transform: [{ translateX }], zIndex: 1 }]}>
                 <Pressable onPress={() => { (loc.left !== 0 && loc.top !== 0) ? sloc({ left: 0, top: 0 }) : press?.(); }} onLongPress={(e) => {
                     const { locationX, locationY, pageY } = e.nativeEvent;
-                    console.log(locationY,pageY,SCREEN_HIGHT)
                     sloc({ left: SCREEN_WIDTH * 0.67 < locationX ? locationX * 0.67 : locationX, top: SCREEN_HIGHT-150<pageY?(SCREEN_HIGHT-150)-pageY : locationY * 0.7 });
                 }}>
                     <ThemedView style={[sty.contItm, { borderColor }]}>
