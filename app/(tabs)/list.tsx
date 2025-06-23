@@ -6,27 +6,27 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedInput } from "@/components/ThemedInput";
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { GestureHandlerRootView, Swipeable } from "react-native-gesture-handler";
 import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from 'expo-router'
 import socket, { init } from '@/constants/Socket';
-import {addChat,rmChat,addChunk,writeFunction,} from '@/constants/file';
+import {addChat,rmChat,addChunk,writeFunction,conty,blocks} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
 import Alert, { AlertProps } from "@/components/Alert";
+import Cont, { exp } from "@/components/Cont"
 import axios from "axios";
 const CONTACTS_KEY = "chat_contacts";
-
-const ChatContactsScreen = () => {
-    interface Contact {
-        id: string;
-        name: string;
-        new?: number;
-    }
+interface Contact {
+    id: string;
+    name: string;
+    new?: number;
+}
+const list = () => {
     const {fileMap,setFileStatus} = useFileProgress();
     const [contacts, setContacts] = useState<Contact[] | null>(null);
+    const [block,sblock] = useState<string[]>([]);
     const [name, sname] = useState("");
     const [uid, suid] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
@@ -47,12 +47,13 @@ const ChatContactsScreen = () => {
         })
     },[nav])
     useEffect(() => {
-        (async()=>{
-            contacts && await AsyncStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
-            sname("");
-            suid("");
-            setModalVisible(false);
-        })();
+        contacts && blocks.set(CONTACTS_KEY,JSON.stringify(block))
+    }, [block])
+    useEffect(() => {
+        contacts && conty.set(CONTACTS_KEY,JSON.stringify(contacts))
+        sname("");
+        suid("");
+        setModalVisible(false);
     }, [contacts])
     useEffect(() => {
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
@@ -63,7 +64,7 @@ const ChatContactsScreen = () => {
                 const path = `${RNFS.ExternalStorageDirectoryPath}/.pandaDoc/`;
                 const exists = await RNFS.exists(path);
                 if (!exists) await RNFS.mkdir(path);
-                dow.set(peerId,(await addChunk(path)));
+                dow.set(peerId,(addChunk(path)));
             },
             onData:(data,peerId)=>{
                 dow.get(peerId)?.(data).then(res=>{
@@ -138,7 +139,7 @@ const ChatContactsScreen = () => {
             }))
         })
         socket.on('msg', async (msg) => {
-            if(msg.time){
+            if(msg.time && !block.includes(msg.yar)){
                 if(addChat(msg.yar,msg)) {
                     const newContact = {
                         id: msg.yar ,
@@ -168,7 +169,7 @@ const ChatContactsScreen = () => {
     }
     const loadContacts = async () => {
         try {
-            const storedContacts = await AsyncStorage.getItem(CONTACTS_KEY);
+            const storedContacts = conty.getString(CONTACTS_KEY);
             syar(await AsyncStorage.getItem('uid') || '');
             if (storedContacts) {
                 setContacts(JSON.parse(storedContacts));
@@ -200,48 +201,44 @@ const ChatContactsScreen = () => {
         addChat(uid,null);
         setContacts(p=>[newContact,...p??[]]);
     };
-    const deleteContact = async (contactId:string) => {
+    const deleteContact = (contactId:string) => {
         const updatedContacts = contacts?.filter((contact) => contact.id !== contactId);
         rmChat(contactId)
         setContacts(updatedContacts??contacts);
     };
-    const showDeleteAlert = (contactId:string) => {
-        salrt(p=>({...p,vis:true,title:'Delete Contact',discription:'Are you sure you want to delete this contact?',button:[
+    const blockContact = (contactId:string)=>{
+        sblock(p=>p.includes(contactId)?p.filter(id=>id!=contactId):[...p,contactId])
+    }
+    const showAlert = (contactId:string,ev:"Block"|"Delete") => {
+        const lable = ev==='Block' && block.includes(contactId)?'Un'+ev:ev;
+        salrt(p=>({...p,vis:true,title:`${lable} Contact`,discription:`Are you sure you want to ${lable} ${contacts?.filter(e=>e.id==contactId)[0].name}?`,button:[
             {txt:'cancel'},
-            {txt:'Delete',onPress:() => deleteContact(contactId)}
+            {txt:lable,onPress:() =>{
+                ev==="Delete"&&deleteContact(contactId)
+                ev==="Block"&& blockContact(contactId)
+            } }
         ]}))
     };
-    const Cont = React.memo(({ item }: { item: Contact }) => (
-        <Swipeable renderRightActions={() => (
-            <TouchableOpacity style={[styles.deleteButton,{backgroundColor:borderColor}]} onPress={() => showDeleteAlert(item.id)}>
-                <ThemedText style={styles.deleteButtonText} lightColor="#ECEDEE" darkColor="#000000">Delete</ThemedText>
-            </TouchableOpacity>)}>
-            <TouchableOpacity onPress={()=>{setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:0}:v))); 
-                nav.navigate('chating',{uid:item.id,nam:item.name,});}} onLongPress={() => showDeleteAlert(item.id)} style={styles.contactItem}>
-                <ThemedText style={styles.contactName}>{item.name} {item.new?`(${item.new})`:''}</ThemedText>
-                <ThemedText style={styles.contactUuid}>{item.id}</ThemedText>
-                {fileMap[item.id]?.prog &&(<>
-                    <ThemedText type="mini">{fileMap[item.id].name}</ThemedText>
-                    <ThemedView style={{height:3}}>
-                        <ThemedView style={{width:`${Number(fileMap[item.id]?.prog ?? '0')}%`,height:'100%',backgroundColor:borderColor}}/>
-                    </ThemedView></>)}
-            </TouchableOpacity>
-        </Swipeable>
-    ));
+    const Conts = ({item}: { item: Contact,index:number }) => {
+        const press = ()=>{
+            setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:undefined}:v))); 
+            nav.navigate('chating',{uid:item.id,nam:item.name,});
+        }
+        return <Cont borderColor={borderColor} onBlockPress={()=>showAlert(item.id,'Block')} onDeletePress={()=>showAlert(item.id,'Delete')} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''} blocked={block.includes(item.id)} contact={item} />
+    };
 
     return (
         <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
-            <GestureHandlerRootView>
                 <ThemedView style={styles.container}>
                     <ThemedView style={styles.eventArea} darkColor="#151718">
                         <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}><Ionicons name="arrow-back" size={28} color={borderColor} /></TouchableOpacity>
-                        <ThemedText style={{fontSize:21,flex:0.8}}>chats</ThemedText>
+                        <ThemedText style={{flex:0.8}} type="title">chats</ThemedText>
                         <TouchableOpacity onPress={vis} style={{flex:0.1}}><Ionicons name="add" size={28} color={borderColor} /></TouchableOpacity>
                     </ThemedView>
                     <TouchableOpacity style={styles.uid} onLongPress={()=>{clipbord.setStringAsync(yar)}}>
                         <ThemedText type="link">{yar}</ThemedText>
                     </TouchableOpacity>
-                    <FlatList data={contacts} keyExtractor={(item) => item.id} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7} removeClippedSubviews renderItem={({item})=><Cont item={item}/>}/>
+                    <FlatList data={contacts} keyExtractor={(item) => item.id} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7} removeClippedSubviews renderItem={({item})=><Conts item={item}/>}/>
                     <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={vis}>
                         <TouchableWithoutFeedback onPress={()=>{isKeyboardVisible?Keyboard.dismiss():vis()}}>
                             <ThemedView style={styles.modalContainer}>
@@ -263,7 +260,6 @@ const ChatContactsScreen = () => {
                     </Modal>
                 </ThemedView>
                 <Alert {...alrt}/>
-            </GestureHandlerRootView>
         </SafeAreaView>
     );
 };
@@ -277,20 +273,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     container: { flex: 1,},
-    contactItem: {
-        padding: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: "#ddd",
-    },
-    contactName: { fontSize: 18, fontWeight: "bold" },
-    contactUuid: { fontSize: 14, color: "gray" },
-    deleteButton: {
-        justifyContent: "center",
-        alignItems: "center",
-        width: 80,
-        marginVertical: 5,
-    },
-    deleteButtonText: {fontWeight: "bold" },
     modalContainer: {
         flex: 1,
         backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -325,5 +307,5 @@ const styles = StyleSheet.create({
     }
 });
 
-export default ChatContactsScreen;
+export default list;
 
