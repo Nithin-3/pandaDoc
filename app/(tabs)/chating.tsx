@@ -1,3 +1,4 @@
+import '@/lang/i18n';
 import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal, Image, Dimensions,} from 'react-native'
 import { useEffect,useState,useRef,useLayoutEffect, useCallback,} from "react";
 import RNFS from 'react-native-fs';
@@ -16,6 +17,7 @@ import {addChat,readChat,ChatMessage,splitSend, conty} from '@/constants/file';
 import axios from 'axios';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as DocumentPicker from 'expo-document-picker';
+import {useTranslation} from 'react-i18next';
 import { peer,P2P } from '@/constants/webrtc';
 import {Vid} from '@/components/Vid';
 import {Aud} from '@/components/Aud';
@@ -28,6 +30,7 @@ type RouteParams = {
     nam: string;
 };
 export default function Chating() {
+    const {t} = useTranslation();
     const { uid, nam ,} = useRoute().params as RouteParams;
     const {width } = Dimensions.get('window')
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
@@ -55,7 +58,7 @@ export default function Chating() {
                 msg.yar == uid &&
                 setTimeout(async()=>smgs(readChat(uid)),100);
             }catch(e:any){
-                salrt(p=>({...p,vis:true,title:'file read error',discription:`${e.message}`,button:[{txt:"ok"}]}))
+                salrt(p=>({...p,vis:true,title:t('er-read'),discription:`${e.message}`,button:[{txt:t("ok")}]}))
             }
         })
         return () =>{ 
@@ -70,7 +73,7 @@ export default function Chating() {
             await peer!.stStrm(vid,uid);
             nav.navigate('call', { uid, nam, cal: 'ON' });
         }else{
-            salrt(p=>({...p,title:`${nam} is offline`,vis:true,button:[{txt:'call later'}]}))
+            salrt(p=>({...p,title:`${nam}${t('is-of')}`,vis:true,button:[{txt:t('call-late')}]}))
         }
     }
 
@@ -106,7 +109,7 @@ export default function Chating() {
                 sfileSta('PRE')
             } 
         } catch (error:any) {
-            salrt(p=>({...p,vis:true,title:'Error picking files',discription:`${error.message}`,button:[{txt:"ok"}]}))
+            salrt(p=>({...p,vis:true,title:t('er-pic'),discription:`${error.message}`,button:[{txt:t('ok')}]}))
         }
     };
     const shoFls = ({item}:{item:DocumentPicker.DocumentPickerAsset}) =>{
@@ -142,7 +145,8 @@ export default function Chating() {
             if (res) {
                 await cpUri(f.uri,f.name);
             }else{
-                salrt(p=>({...p,vis:true,title:'file internal read error',discription:`skiped :${f.name}`,button:[{txt:'retry'}]}))
+                t('er-read')==alrt.title?salrt(p=>({...p,vis:true,discription:`\n${f.name}`})):
+                salrt(p=>({...p,vis:true,title:t('er-read'),discription:`${t('skip')} :${f.name}`,button:[{txt:t('retry')}]}))
             }
         }
         peer!.close(uid);
@@ -156,17 +160,17 @@ export default function Chating() {
                     const off = await peer!.crOff(uid)
                     socket.emit('offer',uid, yar,off);
                 }catch(e:any){
-                    if(e.message!='Peer already connected')salrt(p=>({...p,vis:true,title:'unknown peer',discription:e.message,button:[{txt:'ok'}]}));
+                    if(e.message!='Peer already connected')salrt(p=>({...p,vis:true,title:t('un-peer'),discription:e.message,button:[{txt:t('ok')}]}));
                 }
-                P2P.waitForConnection(peer!.getPeer(uid)!).then(sendFls).catch(e=>salrt(p=>({...p,vis:true,title:'unknown peer',discription:e.message,button:[{txt:'ok'}]})))
+                P2P.waitForConnection(peer!.getPeer(uid)!).then(sendFls).catch(e=>salrt(p=>({...p,vis:true,title:t('un-peer'),discription:e.message,button:[{txt:t('ok')}]})))
             }else{
                 salrt(p=>({...p,
                     vis:true,
-                    title:`user ${nam} is offline`,
-                    discription:`you can send file(s) to server ${nam} resive when online`,
+                    title:`${nam}${t('is-of')}`,
+                    discription:t('s2ser',{name:nam}),
                     button:[
                         {
-                            txt:'send',
+                            txt:t('send'),
                             onPress:()=>{
                                 const data = new FormData();
                                 data.append('uid',uid);
@@ -187,11 +191,11 @@ export default function Chating() {
                                         }
                                         sprog(0);
                                     }).catch(e=>{
-                                        salrt(p=>({...p,vis:true,title:'Sorry...',discription:`${e.response?.status || e.message} occer`,button:[{txt:'ok'}]}))
+                                        salrt(p=>({...p,vis:true,title:'Sorry...',discription:`${e.response?.status || e.message} occer`,button:[{txt:t('ok')}]}))
                                     })
                             }
                         },{
-                            txt:'cancel'
+                            txt:t('cancel')
                         }
                     ]
                 }))

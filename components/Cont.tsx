@@ -1,9 +1,10 @@
+import "@/lang/i18n"
 import { ThemedText } from '@/components/ThemedText';
 import * as clipbord from "expo-clipboard";
 import { ThemedView } from '@/components/ThemedView';
 import React, { useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet, TouchableOpacity, Dimensions, Pressable } from 'react-native';
-
+import {useTranslation} from 'react-i18next'
 interface Contact {
     id: string;
     name: string;
@@ -26,6 +27,7 @@ const SCREEN_HIGHT = Dimensions.get('window').height;
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
 
 const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog, pName, borderColor, press, blocked }) => {
+    const {t} = useTranslation();
     const [loc, sloc] = useState({ left: 0, top: 0 });
     const translateX = useRef(new Animated.Value(0)).current;
 
@@ -54,12 +56,12 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
             <ThemedView style={[sty.act,{backgroundColor:borderColor}]} pointerEvents='box-none'>
                 <ThemedView pointerEvents='auto'>
                     <TouchableOpacity style={[sty.actBtn, { backgroundColor: borderColor }]} onPress={() => { onBlockPress?.(); resetPosition(); }}>
-                        <ThemedText style={{ fontWeight: 'bold' }} lightColor="#ECEDEE" darkColor="#000000">{blocked ? 'Unblock' : 'Block'}</ThemedText>
+                        <ThemedText style={{ fontWeight: 'bold' }} lightColor="#ECEDEE" darkColor="#000000">{t(blocked?'unblock':'block')}</ThemedText>
                     </TouchableOpacity>
                 </ThemedView>
                 <ThemedView pointerEvents='auto'>
                     <TouchableOpacity style={[sty.actBtn, { backgroundColor: borderColor }]} onPress={() => { onDeletePress?.(); resetPosition(); }}>
-                        <ThemedText style={{ fontWeight: 'bold' }} lightColor="#ECEDEE" darkColor="#000000">Delete</ThemedText>
+                        <ThemedText style={{ fontWeight: 'bold' }} lightColor="#ECEDEE" darkColor="#000000">{t('delete')}</ThemedText>
                     </TouchableOpacity>
                 </ThemedView>
             </ThemedView>
@@ -86,16 +88,16 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
                 <ThemedView style={[{ left: loc.left, top: loc.top, borderColor }, sty.pop]}>
                     <ThemedText style={{alignSelf:'center',textDecorationLine:'underline'}} type='subtitle'>{contact.name}</ThemedText>
                     <TouchableOpacity onPress={() => { clipbord.setStringAsync(contact.id); sloc({ left: 0, top: 0 }); }} style={sty.popIn}>
-                        <ThemedText>Copy uid</ThemedText>
+                        <ThemedText>{t('cp-uid')}</ThemedText>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => { onBlockPress?.(); sloc({ left: 0, top: 0 }); }} style={sty.popIn}>
-                        <ThemedText>{blocked ? 'Unblock' : 'Block'}</ThemedText>
+                        <ThemedText>{t(blocked?'unblock':'block')}</ThemedText>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => { onDeletePress?.(); sloc({ left: 0, top: 0 }); }} style={sty.popIn}>
-                        <ThemedText>Delete</ThemedText>
+                        <ThemedText>{t('delete')}</ThemedText>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => { onBlockPress?.(); onDeletePress?.(); sloc({ left: 0, top: 0 }); }} style={sty.popIn}>
-                        <ThemedText>{blocked ? 'Unblock & Delete' : 'Block & Delete'}</ThemedText>
+                        <ThemedText>{t(blocked?'unblock':'block')} {'& Delete'}</ThemedText>
                     </TouchableOpacity>
                 </ThemedView>
             )}

@@ -1,3 +1,4 @@
+import '@/lang/i18n';
 import { useEffect,useState } from 'react';
 import { StyleSheet, TouchableOpacity, FlatList,Modal,Image} from 'react-native';
 import { ThemedView } from "@/components/ThemedView";
@@ -7,14 +8,16 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import RNFS from 'react-native-fs';
 import  ManageExternalStorage  from 'react-native-external-storage-permission';
 import socket from '@/constants/Socket';
+import {useTranslation} from 'react-i18next';
 export default function HomeScreen() {
+    const {t} = useTranslation();
     const nav = useNavigation();
     const [file, setfile] = useState<{ path: string; name: string }[]>([]);
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const [cht,sCht] = useState(false);
     const [vis,svis] = useState(false);
     useEffect(() => {
-        nav.setOptions({title:"DOCs"});
+        nav.setOptions({title:t('doc')});
         const unsubscribe = nav.addListener('focus', () => {
             sCht(false);
             socket.emit('exit')
@@ -75,20 +78,20 @@ export default function HomeScreen() {
             {file.length?
             <FlatList data={file} keyExtractor={i=>i.path} renderItem={list}/>:
                 <ThemedView style={styles.loadSceen}>
-                    <ThemedText>Read all document it may take  some time...</ThemedText>
+                    <ThemedText>{t('read')}</ThemedText>
                     <Image resizeMode="contain" source={require('../../assets/images/read.gif')}/> 
                 </ThemedView>
             }
             <Modal animationType="fade" transparent={true} visible={vis}>
                 <ThemedView style={styles.loadSceen}>
                     <ThemedView style={[styles.allert,{borderColor}]}>
-                        <ThemedText>pandaPdf needs access to your storage to function properly. Please grant permission.</ThemedText>
+                        <ThemedText>{t('rq-per')}</ThemedText>
                         <ThemedView style={styles.buttonViw}>
                             <TouchableOpacity style={[styles.lisTxt,{borderColor}]} onPress={reqPer}>
-                                <ThemedText>ok 👍</ThemedText>
+                                <ThemedText>{t('ok')}</ThemedText>
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.lisTxt,{borderColor}]} onPress={()=>svis(false)}>
-                                <ThemedText>cancel 👎</ThemedText>
+                                <ThemedText>{t('cancel')}</ThemedText>
                             </TouchableOpacity>
                         </ThemedView>
                     </ThemedView>
