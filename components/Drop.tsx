@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import {TouchableOpacity,Modal,FlatList,StyleSheet, View, Dimensions, ScrollView} from 'react-native';
+import {TouchableOpacity,Modal,StyleSheet, Dimensions, ScrollView} from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -21,7 +21,6 @@ export default function Drop({options,placeHolder,onChange}:{options:op[],placeH
         setVisible(false);
         onChange?.(value)
     };
-
     return (
         <ThemedView>
             <TouchableOpacity style={[styles.dropdown,{borderColor}]}
@@ -46,7 +45,14 @@ export default function Drop({options,placeHolder,onChange}:{options:op[],placeH
                     <ScrollView style={[styles.modal,{borderColor,top:loc.y,left:loc.x,maxHeight}]} onLayout={(e)=>{
                         const {width,height} = e.nativeEvent.layout;
                         loc.x>SCREEN_WIDTH-width && sloc(p=>({x:p.x-width,y:p.y}));
-                        SCREEN_HEIGHT-loc.y>height ? smxH(SCREEN_HEIGHT-loc.y-50):smxH(height)
+                        const diff = SCREEN_HEIGHT - loc.y
+                        if(loc.y < SCREEN_HEIGHT * 0.6){
+                            smxH(diff - 50);
+                        }else{
+                            const up = loc.y - loc.y * (loc.y - SCREEN_HEIGHT * 0.6) / (SCREEN_HEIGHT*0.4);
+                            smxH(SCREEN_HEIGHT - up - 50);
+                            sloc(p=>({...p,y:Math.max(up,SCREEN_HEIGHT - height-50)}))
+                        }
                     }}>
                         <ThemedView>
                             {options.map((v,i)=>(
