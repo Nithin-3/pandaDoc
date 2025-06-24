@@ -97,7 +97,7 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
                         <ThemedText>{t('delete')}</ThemedText>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => { onBlockPress?.(); onDeletePress?.(); sloc({ left: 0, top: 0 }); }} style={sty.popIn}>
-                        <ThemedText>{t(blocked?'unblock':'block')} {'& Delete'}</ThemedText>
+                        <ThemedText>{t(blocked?'unblock':'block')} & {t('delete')}</ThemedText>
                     </TouchableOpacity>
                 </ThemedView>
             )}

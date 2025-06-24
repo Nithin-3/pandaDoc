@@ -1,5 +1,5 @@
 import '@/lang/i18n';
-import { useEffect,useState } from 'react';
+import { useEffect,useLayoutEffect,useState } from 'react';
 import { StyleSheet, TouchableOpacity, FlatList,Modal,Image} from 'react-native';
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from '@/components/ThemedText';
@@ -9,6 +9,7 @@ import RNFS from 'react-native-fs';
 import  ManageExternalStorage  from 'react-native-external-storage-permission';
 import socket from '@/constants/Socket';
 import {useTranslation} from 'react-i18next';
+import { MaterialIcons,Ionicons } from '@expo/vector-icons';
 export default function HomeScreen() {
     const {t} = useTranslation();
     const nav = useNavigation();
@@ -17,10 +18,10 @@ export default function HomeScreen() {
     const [cht,sCht] = useState(false);
     const [vis,svis] = useState(false);
     useEffect(() => {
-        nav.setOptions({title:t('doc')});
+        nav.setOptions({headerShown:false,});
         const unsubscribe = nav.addListener('focus', () => {
             sCht(false);
-            socket.emit('exit')
+            socket.emit('exit');
         });
         return unsubscribe;
     }, [nav]);
@@ -75,6 +76,10 @@ export default function HomeScreen() {
 
     return (
         <ThemedView style={styles.root}>
+                    <ThemedView style={styles.eventArea} darkColor="#151718">
+                        <ThemedText style={{flex:0.8}} type="title">{t('chats')}</ThemedText>
+                        <TouchableOpacity onPress={()=>{nav.navigate('setting',{forDoc:true})}} style={{flex:0.1}}><MaterialIcons name="settings" size={28} color={borderColor} /></TouchableOpacity>
+                    </ThemedView>
             {file.length?
             <FlatList data={file} keyExtractor={i=>i.path} renderItem={list}/>:
                 <ThemedView style={styles.loadSceen}>
@@ -106,6 +111,13 @@ const styles = StyleSheet.create({
         flex:1,
         position:"relative",
         },
+    eventArea:{
+        flexDirection:'row',
+        position:'relative',
+        padding:15,
+        justifyContent:"space-between",
+        alignItems: 'center',
+    },
     loadSceen:{
         flex:1,
         justifyContent:"center",

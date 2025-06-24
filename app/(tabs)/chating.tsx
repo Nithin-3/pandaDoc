@@ -1,5 +1,5 @@
 import '@/lang/i18n';
-import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal, Image, Dimensions,} from 'react-native'
+import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,Modal, Image, Dimensions,} from 'react-native'
 import { useEffect,useState,useRef,useLayoutEffect, useCallback,} from "react";
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
@@ -47,8 +47,6 @@ export default function Chating() {
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
     const nav = useNavigation();
-
-    useLayoutEffect(()=>{nav.setOptions({headerShown: false,})},[nav])
     useEffect(() => {
         AsyncStorage.getItem("uid").then(e=>e ?? '').then(syar);
         ScreenCapture.preventScreenCaptureAsync();
@@ -208,14 +206,13 @@ export default function Chating() {
         <ChatBuble item={item} yar={yar} path={RNFS.ExternalStorageDirectoryPath} />
     ),[yar])
     return (
-        <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <ThemedView style={style.chat} >
                     <ThemedView style={[style.eventArea,{}]} darkColor="#151718">
                         <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}>
                             <AntDesign name="arrowleft" size={28} color={borderColor} />
                         </TouchableOpacity>
-                        <ThemedInput value={titNam} onChangeText={stitNam} placeholder="don't be empty..." ref={title} editable={edit} style={{fontSize:32,fontWeight:'bold',flex:0.8}}/>
+                        <ThemedInput value={titNam} onChangeText={stitNam} placeholder="don't be empty..." ref={title} editable={edit} style={{fontSize:25,fontWeight:'bold',flex:0.8}}/>
                         <TouchableOpacity onPress={changeNam} style={{flex:0.1,marginHorizontal:3}}>
                             <AntDesign name={edit?"check":"edit"} size={28} color={borderColor} />
                         </TouchableOpacity>
@@ -272,7 +269,6 @@ export default function Chating() {
                     <Alert {...alrt}/>
                 </ThemedView>
             </TouchableWithoutFeedback>
-        </SafeAreaView>
     )
 }
 const style = StyleSheet.create({

@@ -1,7 +1,7 @@
 import '@/lang/i18n';
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import {useFileProgress} from '@/components/Prog';
-import { FlatList, TouchableOpacity, StyleSheet, Modal, SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
+import { FlatList, TouchableOpacity, StyleSheet, Modal, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -41,9 +41,6 @@ const list = () => {
     const nav = useNavigation();
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     useLayoutEffect(()=>{
-        nav.setOptions({
-            headerShown: false,
-        });
         return nav.addListener('focus', () => {
             loadContacts();
             ScreenCapture.preventScreenCaptureAsync();
@@ -136,7 +133,7 @@ const list = () => {
                         }
                         throw new Error('hggk');
                     }
-                }catch(e:any){
+                    }catch(e:any){
                     e.message === 'hggk' || salrt(p=>({...p,title:t('er-net'),vis:true,button:[{txt:t('ok')}]}));
                 }
             }))
@@ -229,39 +226,37 @@ const list = () => {
     },[block])
 
     return (
-        <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
-                <ThemedView style={styles.container}>
-                    <ThemedView style={styles.eventArea} darkColor="#151718">
-                        <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}><Ionicons name="arrow-back" size={28} color={borderColor} /></TouchableOpacity>
-                        <ThemedText style={{flex:0.8}} type="title">{t('chats')}</ThemedText>
-                        <TouchableOpacity onPress={vis} style={{flex:0.1}}><Ionicons name="add" size={28} color={borderColor} /></TouchableOpacity>
-                    </ThemedView>
-                    <TouchableOpacity style={styles.uid} onLongPress={()=>{clipbord.setStringAsync(yar)}}>
-                        <ThemedText type="link">{yar}</ThemedText>
-                    </TouchableOpacity>
-                    <FlatList data={contacts} keyExtractor={(item) => item.id} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7} removeClippedSubviews renderItem={Conts}/>
-                    <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={vis}>
-                        <TouchableWithoutFeedback onPress={()=>{isKeyboardVisible?Keyboard.dismiss():vis()}}>
-                            <ThemedView style={styles.modalContainer}>
-                                <Pressable style={[styles.modalContent,{borderColor}]}>
-                                    <ThemedText style={styles.modalTitle}>{t('add')}</ThemedText>
-                                    <ThemedInput placeholder="Enter contact name" style={styles.inp} value={name} onChangeText={sname}/>
-                                    <ThemedInput placeholder="Enter UUID" style={styles.inp} value={uid} onChangeText={suid}/>
-                                    <ThemedView style={styles.modalButtons}>
-                                        <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={vis}>
-                                            <ThemedText>{t('cancel')}</ThemedText>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={addContact}>
-                                            <ThemedText>{t('save')}</ThemedText>
-                                        </TouchableOpacity>
-                                    </ThemedView>
-                                </Pressable>
+        <ThemedView style={styles.container}>
+            <ThemedView style={styles.eventArea} darkColor="#151718">
+                <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}><Ionicons name="arrow-back" size={28} color={borderColor} /></TouchableOpacity>
+                <ThemedText style={{flex:0.8}} type="title">{t('chats')}</ThemedText>
+                <TouchableOpacity onPress={vis} style={{flex:0.1}}><Ionicons name="add" size={28} color={borderColor} /></TouchableOpacity>
+            </ThemedView>
+            <TouchableOpacity style={styles.uid} onLongPress={()=>{clipbord.setStringAsync(yar)}}>
+                <ThemedText type="link">{yar}</ThemedText>
+            </TouchableOpacity>
+            <FlatList data={contacts} keyExtractor={(item) => item.id} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7} removeClippedSubviews renderItem={Conts}/>
+            <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={vis}>
+                <TouchableWithoutFeedback onPress={()=>{isKeyboardVisible?Keyboard.dismiss():vis()}}>
+                    <ThemedView style={styles.modalContainer}>
+                        <Pressable style={[styles.modalContent,{borderColor}]}>
+                            <ThemedText style={styles.modalTitle}>{t('add')}</ThemedText>
+                            <ThemedInput placeholder="Enter contact name" style={styles.inp} value={name} onChangeText={sname}/>
+                            <ThemedInput placeholder="Enter UUID" style={styles.inp} value={uid} onChangeText={suid}/>
+                            <ThemedView style={styles.modalButtons}>
+                                <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={vis}>
+                                    <ThemedText>{t('cancel')}</ThemedText>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={addContact}>
+                                    <ThemedText>{t('save')}</ThemedText>
+                                </TouchableOpacity>
                             </ThemedView>
-                        </TouchableWithoutFeedback>
-                    </Modal>
-                </ThemedView>
-                <Alert {...alrt}/>
-        </SafeAreaView>
+                        </Pressable>
+                    </ThemedView>
+                </TouchableWithoutFeedback>
+            </Modal>
+            <Alert {...alrt}/>
+        </ThemedView>
     );
 };
 
