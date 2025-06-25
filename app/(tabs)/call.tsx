@@ -5,8 +5,7 @@ import {MaterialIcons} from '@expo/vector-icons/';
 import {ThemedText} from '@/components/ThemedText';
 import {ThemedView} from '@/components/ThemedView';
 import {useThemeColor} from "@/hooks/useThemeColor"
-import {useNavigation} from 'expo-router'
-import {useRoute} from "@react-navigation/native"
+import {useRoute,useNavigation} from "@react-navigation/native"
 import { peer } from '@/constants/webrtc';
 import socket from '@/constants/Socket';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -129,31 +128,9 @@ export default function Call(){
     );
 }
 const style = StyleSheet.create({
-    chat: {
-        flex: 1,
-    },
-    videoHalf: {
-        height: '50%',
-        width: '100%',
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    micBtn: {
-        position: 'absolute',
-        top: 10,
-        right: 10,
-    },
-    calBtn: {
-        height: 60,
-        width: '100%',
-        position: 'absolute',
-        bottom: 0,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        borderTopWidth: 1,
-        borderColor: '#fff',
-        backgroundColor: 'rgba(0,0,0,0.3)',
-    },
+    chat: { flex: 1, },
+    videoHalf: { height: '50%', width: '100%', position: 'relative', overflow: 'hidden', },
+    micBtn: { position: 'absolute', top: 10, right: 10, },
+    calBtn: { height: 60, width: '100%', position: 'absolute', bottom: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', borderTopWidth: 1, borderColor: '#fff', backgroundColor: 'rgba(0,0,0,0.3)', },
 })
 

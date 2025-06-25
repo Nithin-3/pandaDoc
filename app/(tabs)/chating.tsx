@@ -1,21 +1,22 @@
-import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,SafeAreaView,Platform,Modal, Image, Dimensions,} from 'react-native'
-import { useEffect,useState,useRef,useLayoutEffect, useCallback,} from "react";
+import '@/lang/i18n';
+import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,Modal, Image, Dimensions,} from 'react-native'
+import { useEffect,useState,useRef, useCallback,} from "react";
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import socket from '@/constants/Socket';
-import {useRoute} from "@react-navigation/native"
+import {useRoute,useNavigation} from "@react-navigation/native"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import {MaterialIcons} from '@expo/vector-icons/';
-import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,ChatMessage,splitSend, conty} from '@/constants/file';
 import axios from 'axios';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as DocumentPicker from 'expo-document-picker';
+import {useTranslation} from 'react-i18next';
 import { peer,P2P } from '@/constants/webrtc';
 import {Vid} from '@/components/Vid';
 import {Aud} from '@/components/Aud';
@@ -28,6 +29,7 @@ type RouteParams = {
     nam: string;
 };
 export default function Chating() {
+    const {t} = useTranslation();
     const { uid, nam ,} = useRoute().params as RouteParams;
     const {width } = Dimensions.get('window')
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
@@ -44,8 +46,6 @@ export default function Chating() {
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
     const nav = useNavigation();
-
-    useLayoutEffect(()=>{nav.setOptions({headerShown: false,})},[nav])
     useEffect(() => {
         AsyncStorage.getItem("uid").then(e=>e ?? '').then(syar);
         ScreenCapture.preventScreenCaptureAsync();
@@ -55,7 +55,7 @@ export default function Chating() {
                 msg.yar == uid &&
                 setTimeout(async()=>smgs(readChat(uid)),100);
             }catch(e:any){
-                salrt(p=>({...p,vis:true,title:'file read error',discription:`${e.message}`,button:[{txt:"ok"}]}))
+                salrt(p=>({...p,vis:true,title:t('er-read'),discription:`${e.message}`,button:[{txt:t("ok")}]}))
             }
         })
         return () =>{ 
@@ -70,7 +70,7 @@ export default function Chating() {
             await peer!.stStrm(vid,uid);
             nav.navigate('call', { uid, nam, cal: 'ON' });
         }else{
-            salrt(p=>({...p,title:`${nam} is offline`,vis:true,button:[{txt:'call later'}]}))
+            salrt(p=>({...p,title:`${nam}${t('is-of')}`,vis:true,button:[{txt:t('call-late')}]}))
         }
     }
 
@@ -106,7 +106,7 @@ export default function Chating() {
                 sfileSta('PRE')
             } 
         } catch (error:any) {
-            salrt(p=>({...p,vis:true,title:'Error picking files',discription:`${error.message}`,button:[{txt:"ok"}]}))
+            salrt(p=>({...p,vis:true,title:t('er-pic'),discription:`${error.message}`,button:[{txt:t('ok')}]}))
         }
     };
     const shoFls = ({item}:{item:DocumentPicker.DocumentPickerAsset}) =>{
@@ -142,7 +142,8 @@ export default function Chating() {
             if (res) {
                 await cpUri(f.uri,f.name);
             }else{
-                salrt(p=>({...p,vis:true,title:'file internal read error',discription:`skiped :${f.name}`,button:[{txt:'retry'}]}))
+                t('er-read')==alrt.title?salrt(p=>({...p,vis:true,discription:`\n${f.name}`})):
+                salrt(p=>({...p,vis:true,title:t('er-read'),discription:`${t('skip')} :${f.name}`,button:[{txt:t('retry')}]}))
             }
         }
         peer!.close(uid);
@@ -156,17 +157,17 @@ export default function Chating() {
                     const off = await peer!.crOff(uid)
                     socket.emit('offer',uid, yar,off);
                 }catch(e:any){
-                    if(e.message!='Peer already connected')salrt(p=>({...p,vis:true,title:'unknown peer',discription:e.message,button:[{txt:'ok'}]}));
+                    if(e.message!='Peer already connected')salrt(p=>({...p,vis:true,title:t('un-peer'),discription:e.message,button:[{txt:t('ok')}]}));
                 }
-                P2P.waitForConnection(peer!.getPeer(uid)!).then(sendFls).catch(e=>salrt(p=>({...p,vis:true,title:'unknown peer',discription:e.message,button:[{txt:'ok'}]})))
+                P2P.waitForConnection(peer!.getPeer(uid)!).then(sendFls).catch(e=>salrt(p=>({...p,vis:true,title:t('un-peer'),discription:e.message,button:[{txt:t('ok')}]})))
             }else{
                 salrt(p=>({...p,
                     vis:true,
-                    title:`user ${nam} is offline`,
-                    discription:`you can send file(s) to server ${nam} resive when online`,
+                    title:`${nam}${t('is-of')}`,
+                    discription:t('s2ser',{name:nam}),
                     button:[
                         {
-                            txt:'send',
+                            txt:t('send'),
                             onPress:()=>{
                                 const data = new FormData();
                                 data.append('uid',uid);
@@ -187,11 +188,11 @@ export default function Chating() {
                                         }
                                         sprog(0);
                                     }).catch(e=>{
-                                        salrt(p=>({...p,vis:true,title:'Sorry...',discription:`${e.response?.status || e.message} occer`,button:[{txt:'ok'}]}))
+                                        salrt(p=>({...p,vis:true,title:'Sorry...',discription:`${e.response?.status || e.message} occer`,button:[{txt:t('ok')}]}))
                                     })
                             }
                         },{
-                            txt:'cancel'
+                            txt:t('cancel')
                         }
                     ]
                 }))
@@ -204,14 +205,13 @@ export default function Chating() {
         <ChatBuble item={item} yar={yar} path={RNFS.ExternalStorageDirectoryPath} />
     ),[yar])
     return (
-        <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                 <ThemedView style={style.chat} >
                     <ThemedView style={[style.eventArea,{}]} darkColor="#151718">
                         <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}>
                             <AntDesign name="arrowleft" size={28} color={borderColor} />
                         </TouchableOpacity>
-                        <ThemedInput value={titNam} onChangeText={stitNam} placeholder="don't be empty..." ref={title} editable={edit} style={{fontSize:32,fontWeight:'bold',flex:0.8}}/>
+                        <ThemedInput value={titNam} onChangeText={stitNam} placeholder={t('no-empty')} ref={title} editable={edit} style={{fontSize:25,fontWeight:'bold',flex:0.8}}/>
                         <TouchableOpacity onPress={changeNam} style={{flex:0.1,marginHorizontal:3}}>
                             <AntDesign name={edit?"check":"edit"} size={28} color={borderColor} />
                         </TouchableOpacity>
@@ -268,54 +268,14 @@ export default function Chating() {
                     <Alert {...alrt}/>
                 </ThemedView>
             </TouchableWithoutFeedback>
-        </SafeAreaView>
     )
 }
 const style = StyleSheet.create({
-    chat:{
-        flex:1,
-        position:'relative',
-    },
-    eventArea:{
-        flexDirection:'row',
-        position:'relative',
-        padding:15,
-        justifyContent:"center",
-        alignItems: 'center',
-    },
-    textArea:{
-        flex:1,
-        flexDirection:'row',
-        position:'relative',
-        alignItems:'center',
-        borderWidth:1,
-        borderRadius:20,
-        paddingLeft: 10,
-        overflow:'hidden',
-        maxHeight:80,
-        minHeight: 40,
-    },
-    sendbtn:{
-        flex:0.15,
-    },
-    inputfield:{
-        flex:0.95,
-    },
-    calBtn:{
-        height:'10%',
-        width:'100%',
-        position:'absolute',
-        bottom:0,
-        flexDirection:'row',
-        alignItems:'center',
-        justifyContent:'space-around',
-        borderWidth:1,
-        borderColor:"#fff"
-    },
-    file:{
-        flex:1,
-        justifyContent:'center',
-        alignItems:'center',
-        height:'100%'
-    }
+    chat:{ flex:1, position:'relative', },
+    eventArea:{ flexDirection:'row', position:'relative', padding:15, justifyContent:"center", alignItems: 'center', },
+    textArea:{ flex:1, flexDirection:'row', position:'relative', alignItems:'center', borderWidth:1, borderRadius:20, paddingLeft: 10, overflow:'hidden', maxHeight:80, minHeight: 40, },
+    sendbtn:{ flex:0.15, },
+    inputfield:{ flex:0.95, },
+    calBtn:{ height:'10%', width:'100%', position:'absolute', bottom:0, flexDirection:'row', alignItems:'center', justifyContent:'space-around', borderWidth:1, borderColor:"#fff" },
+    file:{ flex:1, justifyContent:'center', alignItems:'center', height:'100%' }
 })

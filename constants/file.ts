@@ -5,6 +5,7 @@ const enc = new TextEncoder();
 const stor = new MMKV({id:'cht'});
 export const conty = new MMKV({id:'cnt'});
 export const blocks = new MMKV({id:'block'});
+export const settingC = new MMKV({id:'sett'});
 interface FileInfo {
   uri: string;
   name: string;

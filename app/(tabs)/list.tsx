@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
+import '@/lang/i18n';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import {useFileProgress} from '@/components/Prog';
-import { FlatList, TouchableOpacity, StyleSheet, Modal, SafeAreaView,Platform, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
+import { FlatList, TouchableOpacity, StyleSheet, Modal, TouchableWithoutFeedback,Keyboard} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -8,15 +9,16 @@ import { ThemedInput } from "@/components/ThemedInput";
 import { useThemeColor } from '@/hooks/useThemeColor';
 import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
-import {useNavigation} from 'expo-router'
+import {useNavigation} from '@react-navigation/native';
 import socket, { init } from '@/constants/Socket';
 import {addChat,rmChat,addChunk,writeFunction,conty,blocks} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
 import Alert, { AlertProps } from "@/components/Alert";
-import Cont, { exp } from "@/components/Cont"
+import Cont from "@/components/Cont"
 import axios from "axios";
+import {useTranslation} from 'react-i18next';
 const CONTACTS_KEY = "chat_contacts";
 interface Contact {
     id: string;
@@ -24,6 +26,7 @@ interface Contact {
     new?: number;
 }
 const list = () => {
+    const {t} = useTranslation();
     const {fileMap,setFileStatus} = useFileProgress();
     const [contacts, setContacts] = useState<Contact[] | null>(null);
     const [block,sblock] = useState<string[]>([]);
@@ -38,9 +41,6 @@ const list = () => {
     const nav = useNavigation();
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     useLayoutEffect(()=>{
-        nav.setOptions({
-            headerShown: false,
-        });
         return nav.addListener('focus', () => {
             loadContacts();
             ScreenCapture.preventScreenCaptureAsync();
@@ -126,15 +126,15 @@ const list = () => {
                         setContacts(p=>moveToFirst(p??[],yar[0]));
                         setFileStatus(yar[0],{name:'',prog:''})
                     }else{
-                        if('File(s) not Downloaded' == alrt.title){
+                        if(t('fls!down')== alrt.title){
                             salrt(p=>({...p,discription:`${p.discription??''}\n${yar[1]}`,vis:true}));
                         }else{
-                            salrt(p=>({...p,title:"File(s) not Downloaded",discription:yar[1],vis:true,button:[{txt:'ok'}]}));
+                            salrt(p=>({...p,title:t('fls!down'),discription:yar[1],vis:true,button:[{txt:t('ok')}]}));
                         }
                         throw new Error('hggk');
                     }
-                }catch(e:any){
-                    e.message === 'hggk' || salrt(p=>({...p,title:"Network error",vis:true,button:[{txt:'ok'}]}));
+                    }catch(e:any){
+                    e.message === 'hggk' || salrt(p=>({...p,title:t('er-net'),vis:true,button:[{txt:t('ok')}]}));
                 }
             }))
         })
@@ -169,14 +169,12 @@ const list = () => {
     }
     const loadContacts = async () => {
         try {
-            const storedContacts = conty.getString(CONTACTS_KEY);
             syar(await AsyncStorage.getItem('uid') || '');
-            if (storedContacts) {
-                setContacts(JSON.parse(storedContacts));
-            }
+            setContacts(JSON.parse(conty.getString(CONTACTS_KEY)??'[]'));
+            sblock(JSON.parse(blocks.getString(CONTACTS_KEY)??'[]'));
         } catch (error:any) {
-            salrt(p=>({...p,vis:true,title:"Error loading contact",discription:`${error.message}`,button:[
-                {txt:'ok'}
+            salrt(p=>({...p,vis:true,title:t('er-load-contact'),discription:`${error.message}`,button:[
+                {txt:t('ok')}
             ]}))
         }
     };
@@ -184,12 +182,12 @@ const list = () => {
         if (!name.trim()) return;
         const index = contacts?.findIndex(item => item.id === uid) ?? -1;
         if(-1 < index){
-            salrt(p=>({...p,vis:true,title:`uid alredy exist in ${contacts[index]?.name}`,discription:"Are you sure you want to rewrite this contact?",button:[
+            salrt(p=>({...p,vis:true,title:t('uid-exist',{name:contacts[index]?.name}),discription:t('re-write-contact'),button:[
                 {
-                    txt:'ok',
-                    onPress:() => setContacts(p=>p.map(i=>i.id===uid?{...i,name:name.trim()}:i))
+                    txt:t('ok'),
+                    onPress:() => setContacts(p=>p?.map(i=>i.id===uid?{...i,name:name.trim()}:i)||[])
                 },{
-                    txt:'cancel'
+                    txt:t('cancel')
                 }
             ]}))
             return;
@@ -209,102 +207,71 @@ const list = () => {
     const blockContact = (contactId:string)=>{
         sblock(p=>p.includes(contactId)?p.filter(id=>id!=contactId):[...p,contactId])
     }
-    const showAlert = (contactId:string,ev:"Block"|"Delete") => {
-        const lable = ev==='Block' && block.includes(contactId)?'Un'+ev:ev;
-        salrt(p=>({...p,vis:true,title:`${lable} Contact`,discription:`Are you sure you want to ${lable} ${contacts?.filter(e=>e.id==contactId)[0].name}?`,button:[
-            {txt:'cancel'},
-            {txt:lable,onPress:() =>{
-                ev==="Delete"&&deleteContact(contactId)
-                ev==="Block"&& blockContact(contactId)
+    const showAlert = (contactId:string,ev:"block"|"delete") => {
+        const lable = ev==='block' && block.includes(contactId)?'un'+ev:ev;
+        salrt(p=>({...p,vis:true,title:t(`${lable}-c`),discription:t(`${lable}-cc`,{name:`${contacts?.filter(e=>e.id==contactId)[0].name}`}),button:[
+            {txt:t('cancel')},
+            {txt:t(lable),onPress:() =>{
+                ev==="delete"&&deleteContact(contactId)
+                ev==="block"&& blockContact(contactId)
             } }
         ]}))
     };
-    const Conts = ({item}: { item: Contact,index:number }) => {
+    const Conts = useCallback(({item}: { item: Contact,index:number }) => {
+
         const press = ()=>{
             setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:undefined}:v))); 
             nav.navigate('chating',{uid:item.id,nam:item.name,});
         }
-        return <Cont borderColor={borderColor} onBlockPress={()=>showAlert(item.id,'Block')} onDeletePress={()=>showAlert(item.id,'Delete')} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''} blocked={block.includes(item.id)} contact={item} />
-    };
+        return <Cont borderColor={borderColor} onBlockPress={()=>showAlert(item.id,'block')} onDeletePress={()=>showAlert(item.id,'delete')} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''} blocked={block.includes(item.id)} contact={item} />
+    },[block])
 
     return (
-        <SafeAreaView style={{flex:1,paddingTop: Platform.OS === 'android' ? 25 : 0}}>
-                <ThemedView style={styles.container}>
-                    <ThemedView style={styles.eventArea} darkColor="#151718">
-                        <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}><Ionicons name="arrow-back" size={28} color={borderColor} /></TouchableOpacity>
-                        <ThemedText style={{flex:0.8}} type="title">chats</ThemedText>
-                        <TouchableOpacity onPress={vis} style={{flex:0.1}}><Ionicons name="add" size={28} color={borderColor} /></TouchableOpacity>
-                    </ThemedView>
-                    <TouchableOpacity style={styles.uid} onLongPress={()=>{clipbord.setStringAsync(yar)}}>
-                        <ThemedText type="link">{yar}</ThemedText>
-                    </TouchableOpacity>
-                    <FlatList data={contacts} keyExtractor={(item) => item.id} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7} removeClippedSubviews renderItem={({item})=><Conts item={item}/>}/>
-                    <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={vis}>
-                        <TouchableWithoutFeedback onPress={()=>{isKeyboardVisible?Keyboard.dismiss():vis()}}>
-                            <ThemedView style={styles.modalContainer}>
-                                <Pressable style={[styles.modalContent,{borderColor}]}>
-                                    <ThemedText style={styles.modalTitle}>Add Contact</ThemedText>
-                                    <ThemedInput placeholder="Enter contact name" style={styles.inp} value={name} onChangeText={sname}/>
-                                    <ThemedInput placeholder="Enter UUID" style={styles.inp} value={uid} onChangeText={suid}/>
-                                    <ThemedView style={styles.modalButtons}>
-                                        <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={vis}>
-                                            <ThemedText>Cancel</ThemedText>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={addContact}>
-                                            <ThemedText>Save</ThemedText>
-                                        </TouchableOpacity>
-                                    </ThemedView>
-                                </Pressable>
+        <ThemedView style={styles.container}>
+            <ThemedView style={styles.eventArea} darkColor="#151718">
+                <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}><Ionicons name="arrow-back" size={28} color={borderColor} /></TouchableOpacity>
+                <ThemedText style={{flex:0.8}} type="title">{t('chats')}</ThemedText>
+                <TouchableOpacity onPress={vis} style={{flex:0.1}}><Ionicons name="add" size={28} color={borderColor} /></TouchableOpacity>
+            </ThemedView>
+            <TouchableOpacity style={styles.uid} onLongPress={()=>{clipbord.setStringAsync(yar)}}>
+                <ThemedText type="link">{yar}</ThemedText>
+            </TouchableOpacity>
+            <FlatList data={contacts} keyExtractor={(item) => item.id} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7} removeClippedSubviews renderItem={Conts}/>
+            <Modal visible={modalVisible} animationType='fade' transparent onRequestClose={vis}>
+                <TouchableWithoutFeedback onPress={()=>{isKeyboardVisible?Keyboard.dismiss():vis()}}>
+                    <ThemedView style={styles.modalContainer}>
+                        <ThemedView style={[styles.modalContent,{borderColor}]}>
+                            <ThemedText style={styles.modalTitle}>{t('add')}</ThemedText>
+                            <ThemedInput placeholder={t('in-cont')} style={styles.inp} value={name} onChangeText={sname}/>
+                            <ThemedInput placeholder={t('in-uid')} style={styles.inp} value={uid} onChangeText={suid}/>
+                            <ThemedView style={styles.modalButtons}>
+                                <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={vis}>
+                                    <ThemedText>{t('cancel')}</ThemedText>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={addContact}>
+                                    <ThemedText>{t('save')}</ThemedText>
+                                </TouchableOpacity>
                             </ThemedView>
-                        </TouchableWithoutFeedback>
-                    </Modal>
-                </ThemedView>
-                <Alert {...alrt}/>
-        </SafeAreaView>
+                        </ThemedView>
+                    </ThemedView>
+                </TouchableWithoutFeedback>
+            </Modal>
+            <Alert {...alrt}/>
+        </ThemedView>
+
     );
 };
 
 const styles = StyleSheet.create({
-    eventArea:{
-        flexDirection:'row',
-        position:'relative',
-        padding:15,
-        justifyContent:"center",
-        alignItems: 'center',
-    },
+    eventArea:{ flexDirection:'row', position:'relative', padding:15, justifyContent:"center", alignItems: 'center', },
     container: { flex: 1,},
-    modalContainer: {
-        flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    modalContent: {
-        width: "80%",
-        padding: 20,
-        borderRadius: 10,
-        borderWidth: 2,
-    },
+    modalContainer: { flex: 1, backgroundColor:"rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", },
+    modalContent: { width: "80%", padding: 20, borderRadius: 10, borderWidth: 2, },
     modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
-    modalButtons: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 15,
-        paddingHorizontal: 10,
-    },
-    modalButton: {
-        padding: 10,
-        borderRadius: 5,
-        alignItems: "center",
-        marginHorizontal: 5,
-        borderWidth: 2,
-    },
-    uid:{
-        alignSelf: 'center',
-    },
-    inp:{
-        margin: 5,
-    }
+    modalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 15, paddingHorizontal: 10, },
+    modalButton: { padding: 10, borderRadius: 5, alignItems: "center", marginHorizontal: 5, borderWidth: 2, },
+    uid:{ alignSelf: 'center', },
+    inp:{ margin: 5, }
 });
 
 export default list;
