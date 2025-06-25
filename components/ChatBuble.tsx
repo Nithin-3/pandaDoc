@@ -58,13 +58,5 @@ export const ChatBuble = React.memo<ChatBubleProps>(({item,yar,path})=>{
     prev.path === next.path
 );
 const style = StyleSheet.create({
-    msg:{
-        flex:1,
-        alignItems:'center',
-        justifyContent:"center",
-        maxWidth:'55%',
-        padding:7,
-        borderRadius:15,
-        borderWidth:1,
-    },
+    msg:{ flex:1, alignItems:'center', justifyContent:"center", maxWidth:'55%', padding:7, borderRadius:15, borderWidth:1, },
 })

@@ -1,7 +1,7 @@
 import '@/lang/i18n';
 import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import {useFileProgress} from '@/components/Prog';
-import { FlatList, TouchableOpacity, StyleSheet, Modal, TouchableWithoutFeedback,Pressable,Keyboard} from "react-native";
+import { FlatList, TouchableOpacity, StyleSheet, Modal, TouchableWithoutFeedback,Keyboard} from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -236,13 +236,13 @@ const list = () => {
                 <ThemedText type="link">{yar}</ThemedText>
             </TouchableOpacity>
             <FlatList data={contacts} keyExtractor={(item) => item.id} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7} removeClippedSubviews renderItem={Conts}/>
-            <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={vis}>
+            <Modal visible={modalVisible} animationType='fade' transparent onRequestClose={vis}>
                 <TouchableWithoutFeedback onPress={()=>{isKeyboardVisible?Keyboard.dismiss():vis()}}>
                     <ThemedView style={styles.modalContainer}>
-                        <Pressable style={[styles.modalContent,{borderColor}]}>
+                        <ThemedView style={[styles.modalContent,{borderColor}]}>
                             <ThemedText style={styles.modalTitle}>{t('add')}</ThemedText>
                             <ThemedInput placeholder="Enter contact name" style={styles.inp} value={name} onChangeText={sname}/>
-                            <ThemedInput placeholder="Enter UUID" style={styles.inp} value={uid} onChangeText={suid}/>
+                            <ThemedInput placeholder="Enter UID" style={styles.inp} value={uid} onChangeText={suid}/>
                             <ThemedView style={styles.modalButtons}>
                                 <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={vis}>
                                     <ThemedText>{t('cancel')}</ThemedText>
@@ -251,7 +251,7 @@ const list = () => {
                                     <ThemedText>{t('save')}</ThemedText>
                                 </TouchableOpacity>
                             </ThemedView>
-                        </Pressable>
+                        </ThemedView>
                     </ThemedView>
                 </TouchableWithoutFeedback>
             </Modal>
@@ -261,46 +261,15 @@ const list = () => {
 };
 
 const styles = StyleSheet.create({
-    eventArea:{
-        flexDirection:'row',
-        position:'relative',
-        padding:15,
-        justifyContent:"center",
-        alignItems: 'center',
-    },
+    eventArea:{ flexDirection:'row', position:'relative', padding:15, justifyContent:"center", alignItems: 'center', },
     container: { flex: 1,},
-    modalContainer: {
-        flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    modalContent: {
-        width: "80%",
-        padding: 20,
-        borderRadius: 10,
-        borderWidth: 2,
-    },
+    modalContainer: { flex: 1, backgroundColor:"rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", },
+    modalContent: { width: "80%", padding: 20, borderRadius: 10, borderWidth: 2, },
     modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
-    modalButtons: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 15,
-        paddingHorizontal: 10,
-    },
-    modalButton: {
-        padding: 10,
-        borderRadius: 5,
-        alignItems: "center",
-        marginHorizontal: 5,
-        borderWidth: 2,
-    },
-    uid:{
-        alignSelf: 'center',
-    },
-    inp:{
-        margin: 5,
-    }
+    modalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 15, paddingHorizontal: 10, },
+    modalButton: { padding: 10, borderRadius: 5, alignItems: "center", marginHorizontal: 5, borderWidth: 2, },
+    uid:{ alignSelf: 'center', },
+    inp:{ margin: 5, }
 });
 
 export default list;

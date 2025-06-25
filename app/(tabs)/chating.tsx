@@ -1,6 +1,6 @@
 import '@/lang/i18n';
 import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,Modal, Image, Dimensions,} from 'react-native'
-import { useEffect,useState,useRef,useLayoutEffect, useCallback,} from "react";
+import { useEffect,useState,useRef, useCallback,} from "react";
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedInput } from '@/components/ThemedInput';
@@ -272,50 +272,11 @@ export default function Chating() {
     )
 }
 const style = StyleSheet.create({
-    chat:{
-        flex:1,
-        position:'relative',
-    },
-    eventArea:{
-        flexDirection:'row',
-        position:'relative',
-        padding:15,
-        justifyContent:"center",
-        alignItems: 'center',
-    },
-    textArea:{
-        flex:1,
-        flexDirection:'row',
-        position:'relative',
-        alignItems:'center',
-        borderWidth:1,
-        borderRadius:20,
-        paddingLeft: 10,
-        overflow:'hidden',
-        maxHeight:80,
-        minHeight: 40,
-    },
-    sendbtn:{
-        flex:0.15,
-    },
-    inputfield:{
-        flex:0.95,
-    },
-    calBtn:{
-        height:'10%',
-        width:'100%',
-        position:'absolute',
-        bottom:0,
-        flexDirection:'row',
-        alignItems:'center',
-        justifyContent:'space-around',
-        borderWidth:1,
-        borderColor:"#fff"
-    },
-    file:{
-        flex:1,
-        justifyContent:'center',
-        alignItems:'center',
-        height:'100%'
-    }
+    chat:{ flex:1, position:'relative', },
+    eventArea:{ flexDirection:'row', position:'relative', padding:15, justifyContent:"center", alignItems: 'center', },
+    textArea:{ flex:1, flexDirection:'row', position:'relative', alignItems:'center', borderWidth:1, borderRadius:20, paddingLeft: 10, overflow:'hidden', maxHeight:80, minHeight: 40, },
+    sendbtn:{ flex:0.15, },
+    inputfield:{ flex:0.95, },
+    calBtn:{ height:'10%', width:'100%', position:'absolute', bottom:0, flexDirection:'row', alignItems:'center', justifyContent:'space-around', borderWidth:1, borderColor:"#fff" },
+    file:{ flex:1, justifyContent:'center', alignItems:'center', height:'100%' }
 })

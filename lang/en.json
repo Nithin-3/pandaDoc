@@ -36,5 +36,6 @@
     "closed":"Closed",
     "disconnected":"Disconnected",
     "failed":"Failed",
-    "peer-con":"peer connection "
+    "peer-con":"peer connection ",
+    "setting":"settings"
 }

@@ -107,39 +107,11 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-    root:{
-        flex:1,
-        position:"relative",
-        },
-    eventArea:{
-        flexDirection:'row',
-        position:'relative',
-        padding:15,
-        justifyContent:"space-between",
-        alignItems: 'center',
-    },
-    loadSceen:{
-        flex:1,
-        justifyContent:"center",
-        alignItems: 'center',
-    },
-    lisTxt:{
-        alignSelf: 'flex-start',
-        justifyContent:"center",
-        padding:7,
-        borderRadius:15,
-        borderWidth:1,
-        width:'auto',
-    },
-    allert : {
-        margin: 20,
-        borderRadius: 12,
-        padding: 20,
-        elevation: 5,
-    },
-    buttonViw:{
-        flexDirection: 'row',    
-        justifyContent: 'space-between'
-    }
+    root:{ flex:1, position:"relative", },
+    eventArea:{ flexDirection:'row', position:'relative', padding:15, justifyContent:"space-between", alignItems: 'center', },
+    loadSceen:{ flex:1, justifyContent:"center", alignItems: 'center', },
+    lisTxt:{ alignSelf: 'flex-start', justifyContent:"center", padding:7, borderRadius:15, borderWidth:1, width:'auto', },
+    allert : { margin: 20, borderRadius: 12, padding: 20, elevation: 5, },
+    buttonViw:{ flexDirection: 'row',     justifyContent: 'space-between' }
 });
 
