@@ -37,5 +37,8 @@
     "disconnected":"Disconnected",
     "failed":"Failed",
     "peer-con":"peer connection ",
-    "setting":"settings"
+    "setting":"settings",
+    "in-cont":"Enter Name",
+    "in-uid":"Enter UID",
+    "no-empty":"Don't let it be empty..."
 }

@@ -4,16 +4,16 @@ import * as Loc from 'react-native-localize';
 import en from './en.json';
 import ml from './ml.json';
 import ta from './ta.json';
-import { lang } from '@/constants/file';
+import { settingC } from '@/constants/file';
 
 i18n.use({
         type:'languageDetector',
         async: true,
         detect: (cb:any) => {
-            const savelang = lang.getString('lang')
+            const savelang = settingC.getString('lang')
             if(savelang) return cb(savelang);
             const fit = Loc.findBestLanguageTag(['en', 'ml','ta'])?.languageTag || 'en'
-            lang.set('lang',fit);
+            settingC.set('lang',fit);
             cb(fit);
         },
         init:()=>{},

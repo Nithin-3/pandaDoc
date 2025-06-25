@@ -35,6 +35,7 @@
         <data android:scheme="com.anonymous.pandaDoc"/>
         <data android:scheme="exp+pandadoc"/>
         <data android:scheme="com.ninja.pandaDoc"/>
+        <data android:scheme="exp+nit-ninja"/>
       </intent-filter>
     </activity>
     <provider android:name="com.facebook.react.modules.blob.BlobProvider" android:authorities="@string/blob_provider_authority" android:exported="false"/>

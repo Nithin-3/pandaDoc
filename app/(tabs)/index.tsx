@@ -1,15 +1,15 @@
 import '@/lang/i18n';
-import { useEffect,useLayoutEffect,useState } from 'react';
+import { useEffect,useState } from 'react';
 import { StyleSheet, TouchableOpacity, FlatList,Modal,Image} from 'react-native';
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from '@/components/ThemedText';
-import { useNavigation } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import RNFS from 'react-native-fs';
 import  ManageExternalStorage  from 'react-native-external-storage-permission';
 import socket from '@/constants/Socket';
 import {useTranslation} from 'react-i18next';
-import { MaterialIcons,Ionicons } from '@expo/vector-icons';
+import { MaterialIcons, } from '@expo/vector-icons';
 export default function HomeScreen() {
     const {t} = useTranslation();
     const nav = useNavigation();
@@ -77,7 +77,7 @@ export default function HomeScreen() {
     return (
         <ThemedView style={styles.root}>
                     <ThemedView style={styles.eventArea} darkColor="#151718">
-                        <ThemedText style={{flex:0.8}} type="title">{t('chats')}</ThemedText>
+                        <ThemedText style={{flex:0.8}} type="title">{t('doc')}</ThemedText>
                         <TouchableOpacity onPress={()=>{nav.navigate('setting',{forDoc:true})}} style={{flex:0.1}}><MaterialIcons name="settings" size={28} color={borderColor} /></TouchableOpacity>
                     </ThemedView>
             {file.length?

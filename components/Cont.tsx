@@ -76,7 +76,7 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
             <Animated.View {...panResponder.panHandlers} style={[{ transform: [{ translateX }], zIndex: 1 }]}>
                 <Pressable onPress={press} onLongPress={(e) => {
                     const { pageY,pageX } = e.nativeEvent;
-                    sloc({ left:pageX, top:pageY});
+                    sloc({ left:pageX, top:pageY-50});
                 }}>
                     <ThemedView style={[sty.contItm, { borderColor }]}>
                         <ThemedText style={[sty.contNam, { textDecorationLine: blocked ? 'underline line-through' : 'none' }]}>{contact.name} {contact.new && contact.new}</ThemedText>
@@ -99,7 +99,7 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
                             sloc(p=>({...p,left:p.left - width - 30}));
                         }
                         if(SCREEN_HIGHT - height < loc.top){
-                            sloc(p=>({...p,top:p.top - height - 30}))
+                            sloc(p=>({...p,top:p.top - height+20}))
                         }
                     }} style={{ left: loc.left, top: loc.top, position:'absolute'} }>
                     <ThemedView style={[{borderColor},sty.pop]}>

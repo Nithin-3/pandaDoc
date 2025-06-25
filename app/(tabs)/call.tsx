@@ -5,8 +5,7 @@ import {MaterialIcons} from '@expo/vector-icons/';
 import {ThemedText} from '@/components/ThemedText';
 import {ThemedView} from '@/components/ThemedView';
 import {useThemeColor} from "@/hooks/useThemeColor"
-import {useNavigation} from 'expo-router'
-import {useRoute} from "@react-navigation/native"
+import {useRoute,useNavigation} from "@react-navigation/native"
 import { peer } from '@/constants/webrtc';
 import socket from '@/constants/Socket';
 import AsyncStorage from '@react-native-async-storage/async-storage';

@@ -9,7 +9,7 @@ import { ThemedInput } from "@/components/ThemedInput";
 import { useThemeColor } from '@/hooks/useThemeColor';
 import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
-import {useNavigation} from 'expo-router'
+import {useNavigation} from '@react-navigation/native';
 import socket, { init } from '@/constants/Socket';
 import {addChat,rmChat,addChunk,writeFunction,conty,blocks} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
@@ -241,8 +241,8 @@ const list = () => {
                     <ThemedView style={styles.modalContainer}>
                         <ThemedView style={[styles.modalContent,{borderColor}]}>
                             <ThemedText style={styles.modalTitle}>{t('add')}</ThemedText>
-                            <ThemedInput placeholder="Enter contact name" style={styles.inp} value={name} onChangeText={sname}/>
-                            <ThemedInput placeholder="Enter UID" style={styles.inp} value={uid} onChangeText={suid}/>
+                            <ThemedInput placeholder={t('in-cont')} style={styles.inp} value={name} onChangeText={sname}/>
+                            <ThemedInput placeholder={t('in-uid')} style={styles.inp} value={uid} onChangeText={suid}/>
                             <ThemedView style={styles.modalButtons}>
                                 <TouchableOpacity style={[styles.modalButton,{borderColor}]} onPress={vis}>
                                     <ThemedText>{t('cancel')}</ThemedText>

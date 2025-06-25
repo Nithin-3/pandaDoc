@@ -7,11 +7,10 @@ import { ThemedInput } from '@/components/ThemedInput';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import socket from '@/constants/Socket';
-import {useRoute} from "@react-navigation/native"
+import {useRoute,useNavigation} from "@react-navigation/native"
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AntDesign from '@expo/vector-icons/AntDesign';
 import {MaterialIcons} from '@expo/vector-icons/';
-import {useNavigation} from 'expo-router'
 import { TextInput } from 'react-native-gesture-handler';
 import {addChat,readChat,ChatMessage,splitSend, conty} from '@/constants/file';
 import axios from 'axios';
@@ -212,7 +211,7 @@ export default function Chating() {
                         <TouchableOpacity onPress={nav.goBack} style={{flex:0.1}}>
                             <AntDesign name="arrowleft" size={28} color={borderColor} />
                         </TouchableOpacity>
-                        <ThemedInput value={titNam} onChangeText={stitNam} placeholder="don't be empty..." ref={title} editable={edit} style={{fontSize:25,fontWeight:'bold',flex:0.8}}/>
+                        <ThemedInput value={titNam} onChangeText={stitNam} placeholder={t('no-empty')} ref={title} editable={edit} style={{fontSize:25,fontWeight:'bold',flex:0.8}}/>
                         <TouchableOpacity onPress={changeNam} style={{flex:0.1,marginHorizontal:3}}>
                             <AntDesign name={edit?"check":"edit"} size={28} color={borderColor} />
                         </TouchableOpacity>
