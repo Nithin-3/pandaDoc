@@ -218,6 +218,7 @@ const list = () => {
         ]}))
     };
     const Conts = useCallback(({item}: { item: Contact,index:number }) => {
+
         const press = ()=>{
             setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:undefined}:v))); 
             nav.navigate('chating',{uid:item.id,nam:item.name,});
@@ -257,6 +258,7 @@ const list = () => {
             </Modal>
             <Alert {...alrt}/>
         </ThemedView>
+
     );
 };
 

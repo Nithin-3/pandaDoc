@@ -5,6 +5,7 @@ import { ThemedView } from '@/components/ThemedView';
 import React, { useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet, TouchableOpacity, Dimensions, Pressable, Modal, View } from 'react-native';
 import {useTranslation} from 'react-i18next'
+
 interface Contact {
     id: string;
     name: string;
@@ -32,6 +33,7 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
     const right = useRef(0);
     const left = useRef(0);
 
+
     const panResponder = useRef(PanResponder.create({
         onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 10,
         onPanResponderMove: (_, gesture) => {
@@ -44,6 +46,7 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
                 slideRigt()
             } else {
                 resetPosition()
+
             }
         }
     })).current;
@@ -69,6 +72,7 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
                 <ThemedView pointerEvents='auto' >
                     <TouchableOpacity onLayout={e=>right.current =e.nativeEvent.layout.width} style={[sty.actBtn, { backgroundColor: borderColor }]} onPress={() => { onDeletePress?.(); resetPosition(); }}>
                         <ThemedText style={{ fontWeight: 'bold' }} lightColor="#ECEDEE" darkColor="#000000">{t('delete')}</ThemedText>
+
                     </TouchableOpacity>
                 </ThemedView>
             </ThemedView>
@@ -77,6 +81,7 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
                 <Pressable onPress={press} onLongPress={(e) => {
                     const { pageY,pageX } = e.nativeEvent;
                     sloc({ left:pageX, top:pageY-50});
+
                 }}>
                     <ThemedView style={[sty.contItm, { borderColor }]}>
                         <ThemedText style={[sty.contNam, { textDecorationLine: blocked ? 'underline line-through' : 'none' }]}>{contact.name} {contact.new && contact.new}</ThemedText>
