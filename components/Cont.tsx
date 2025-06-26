@@ -5,6 +5,7 @@ import { ThemedView } from '@/components/ThemedView';
 import React, { useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet, TouchableOpacity, Dimensions, Pressable, Modal, View } from 'react-native';
 import {useTranslation} from 'react-i18next'
+import { MaterialIcons } from "@expo/vector-icons";
 
 interface Contact {
     id: string;
@@ -20,13 +21,14 @@ interface contProps {
     prog: string;
     pName: string;
     blocked: boolean;
+    blockedBy: boolean;
     borderColor: string;
 }
 
 const SCREEN_WIDTH = Dimensions.get('screen').width;
 const SCREEN_HIGHT = Dimensions.get('window').height;
 
-const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog, pName, borderColor, press, blocked }) => {
+const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog, pName, borderColor, press, blocked, blockedBy }) => {
     const {t} = useTranslation();
     const [loc, sloc] = useState({ left: 0, top: 0 });
     const translateX = useRef(new Animated.Value(0)).current;
@@ -84,7 +86,7 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
 
                 }}>
                     <ThemedView style={[sty.contItm, { borderColor }]}>
-                        <ThemedText style={[sty.contNam, { textDecorationLine: blocked ? 'underline line-through' : 'none' }]}>{contact.name} {contact.new && contact.new}</ThemedText>
+                        <ThemedText style={[sty.contNam, { textDecorationLine: blocked ? 'underline line-through' : 'none' }]}>{contact.name} {contact.new && contact.new}{blockedBy && <MaterialIcons name="block" size={15} />}</ThemedText>
                         <ThemedText style={sty.contId}>{contact.id}</ThemedText>
                         {prog && (<>
                             <ThemedText type="mini">{pName}</ThemedText>
@@ -147,6 +149,7 @@ export default React.memo(Cont, (prev, next) =>
     prev.prog === next.prog &&
     prev.pName === next.pName &&
     prev.borderColor === next.borderColor &&
-    prev.blocked === next.blocked
+    prev.blocked === next.blocked &&
+    prev.blockedBy === next.blockedBy
 );
 
