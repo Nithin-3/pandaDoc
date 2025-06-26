@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 const SOCKET_URL = "wss://pandadoc.onrender.com/";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import uuid from "react-native-uuid";
+import { settingC } from "./file";
 
 const socket = io(SOCKET_URL, {
     transports: ["websocket"],
@@ -9,13 +9,12 @@ const socket = io(SOCKET_URL, {
     reconnectionAttempts: 10,
     reconnectionDelay: 5000,
 });
-export const init = async () => {
-    let uid = await AsyncStorage.getItem("uid");
+const init = async () => {
+    let uid = settingC.getString('uid');
     if (!uid) {
         uid = uuid.v4();
-        await AsyncStorage.setItem("uid", uid);
+        settingC.set('uid',uid);
     }
-    socket.emit("set", uid);
 };
-
+init();
 export default socket;

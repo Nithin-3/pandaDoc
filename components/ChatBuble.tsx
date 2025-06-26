@@ -41,10 +41,10 @@ export const ChatBuble = React.memo<ChatBubleProps>(({item,yar,path})=>{
     }
     return(
         <Pressable style={{width:"100%"}} onLongPress={()=>{clip.setStringAsync(item.msg ?? item.uri ?? 'null')}}>
-            <ThemedView style={[style.msg,{alignSelf:item.yar==yar?"flex-end":item.yar=='mid'?'center':'flex-start'},{borderColor}]}>
+            <ThemedView style={[style.msg,{alignSelf:item.who==yar?"flex-end":item.who=='mid'?'center':'flex-start'},{borderColor}]}>
                 {item.msg&&<ThemedText>{item.msg}</ThemedText>}
                 {item.uri && chtFls(item.uri)}
-                <ThemedText type='mini' style={{alignSelf:item.yar == 'mid'?'center':item.yar==yar?'flex-start':'flex-end'}}>{new Date(item.time).toLocaleString()}</ThemedText>
+                <ThemedText type='mini' style={{alignSelf:item.who == 'mid'?'center':item.who==yar?'flex-start':'flex-end'}}>{new Date(item.time!).toLocaleString()}</ThemedText>
             </ThemedView>
         </Pressable>
     )
@@ -53,7 +53,7 @@ export const ChatBuble = React.memo<ChatBubleProps>(({item,yar,path})=>{
     prev.item.msg === next.item.msg &&
     prev.item.uri === next.item.uri &&
     prev.item.time === next.item.time &&
-    prev.item.yar === next.item.yar &&
+    prev.item.who === next.item.who &&
     prev.yar === next.yar &&
     prev.path === next.path
 );

@@ -1,8 +1,7 @@
 import '@/lang/i18n';
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef,} from "react";
 import {useFileProgress} from '@/components/Prog';
 import { FlatList, TouchableOpacity, StyleSheet, Modal, TouchableWithoutFeedback,Keyboard} from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedInput } from "@/components/ThemedInput";
@@ -10,8 +9,8 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from '@react-navigation/native';
-import socket, { init } from '@/constants/Socket';
-import {addChat,rmChat,addChunk,writeFunction,conty,blocks} from '@/constants/file';
+import socket from '@/constants/Socket';
+import {addChat,rmChat,addChunk,writeFunction,conty,blocks, ChatMessage, settingC, appPath} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
@@ -25,19 +24,20 @@ interface Contact {
     name: string;
     new?: number;
 }
-const list = () => {
+const List = () => {
     const {t} = useTranslation();
     const {fileMap,setFileStatus} = useFileProgress();
     const [contacts, setContacts] = useState<Contact[] | null>(null);
-    const [block,sblock] = useState<string[]>([]);
+    const [block,sblock] = useState<string[]>(JSON.parse(blocks.getString(CONTACTS_KEY)??'[]'));
+    const [blockBy,sblockBy] = useState<string[]>(JSON.parse(blocks.getString('by')??'[]'));
     const [name, sname] = useState("");
     const [uid, suid] = useState("");
     const [modalVisible, setModalVisible] = useState(false);
-    const [yar,syar] = useState("");
+    const whoami = settingC.getString('uid') ?? '';
     const [alrt,salrt] = useState<AlertProps>({vis:false,setVis:()=>{salrt(p=>({...p, vis:false,title:'',discription:'',button:[]}))},title:'',discription:'',button:[]});
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const peer = useRef<P2P|null>(null);
-    const dow = new Map<string,writeFunction>();
+    const dow = useRef(new Map<string,writeFunction>()).current;
     const nav = useNavigation();
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     useLayoutEffect(()=>{
@@ -56,20 +56,17 @@ const list = () => {
         setModalVisible(false);
     }, [contacts])
     useEffect(() => {
+        socket.emit('set',whoami)
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
         const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {setIsKeyboardVisible(false);});
-        init();
         peer.current = new P2P({
             onDatOpen:async (peerId)=>{
-                const path = `${RNFS.ExternalStorageDirectoryPath}/.pandaDoc/`;
-                const exists = await RNFS.exists(path);
-                if (!exists) await RNFS.mkdir(path);
-                dow.set(peerId,(addChunk(path)));
+                dow.set(peerId,(addChunk(await appPath())));
             },
             onData:(data,peerId)=>{
                 dow.get(peerId)?.(data).then(res=>{
                     if(typeof res == 'string'){
-                        addChat(peerId,{uri:`file://${res}`,yar:peerId,time:Date.now()});
+                        addChat(peerId,{uri:`file://${res}`,who:peerId,time:Date.now()});
                         dow.delete(peerId);
                         setFileStatus(peerId,{prog:'',name:''});
                     }else if(res == -1){
@@ -84,17 +81,20 @@ const list = () => {
                 peer.current?.close(peerId)
             },
             onICE:(candidate,uid)=>{
-                AsyncStorage.getItem('uid').then(yar=>{
-                    socket.emit('ice', uid,yar, candidate);
-                })
+                socket.emit('ice', uid,whoami, candidate);
             }
 
         })
 
         socket.on('offer',async (peerId:string,off)=>{
+            if(block.includes(peerId)){
+                console.log('blocked');
+                socket.emit('blocked',peerId,whoami);
+                return;
+            }
             peer.current?.setRemDisc(peerId,off);
             const ans = await peer.current?.crAns(peerId);
-            socket.emit('answer',peerId,await AsyncStorage.getItem('uid'),ans);
+            socket.emit('answer',peerId,whoami,ans);
         })
         socket.on('answer',async(peerId:string,ans)=>{
             peer.current?.setRemDisc(peerId,ans);
@@ -107,22 +107,27 @@ const list = () => {
             nav.navigate('call',{uid:peerId,cal:'IN',nam:'dgerbeb'})
         })
         socket.on('wait',(tree:string[])=>{
+                const blockSet = new Set<string>();
             Promise.all(tree.map(async url=>{
                 try{
-                    let path = `${RNFS.ExternalStorageDirectoryPath}/.pandaDoc/`;
-                    const exists = await RNFS.exists(path);
-                    if (!exists) await RNFS.mkdir(path);
+                    const sender = url.split('/')[0]
+                    if(block.includes(sender) && !blockSet.has(sender)){
+                        blockSet.add(sender);
+                        console.log('block');
+                        socket.emit('block',sender,whoami);
+                        return;
+                    }
                     const yar = url.split('/')
-                    path = `${path}/${yar[1]}`
-                    const dow = RNFS.downloadFile({fromUrl:`https://pandadoc.onrender.com/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`,toFile:path,discretionary:true,cacheable:true,begin:()=>{
+                    const path = `${await appPath()}/${yar[1]}`
+                    const dow = RNFS.downloadFile({fromUrl:`https://pandadoc.onrender.com/dow/${whoami}/${url}`,toFile:path,discretionary:true,cacheable:true,begin:()=>{
                         setFileStatus(yar[0],{name:yar[1].split('°').pop()??'Downloading'})
                     },progress:rs=>{
                             setFileStatus(yar[0],{prog:(rs.bytesWritten/rs.contentLength * 100).toFixed(2)})
                         },progressDivider:5})
                     const res = await dow.promise;
                     if(res.statusCode === 200){
-                        addChat(yar[0],{uri:`file://${path}`,yar:yar[0],time:Date.now()});
-                        await axios.delete(`https://pandadoc.onrender.com/dow/${await AsyncStorage.getItem('uid') || ''}/${url}`)
+                        addChat(yar[0],{uri:`file://${path}`,who:yar[0],time:Date.now()});
+                        await axios.delete(`https://pandadoc.onrender.com/dow/${whoami}/${url}`)
                         setContacts(p=>moveToFirst(p??[],yar[0]));
                         setFileStatus(yar[0],{name:'',prog:''})
                     }else{
@@ -138,18 +143,28 @@ const list = () => {
                 }
             }))
         })
-        socket.on('msg', async (msg) => {
-            if(msg.time && !block.includes(msg.yar)){
-                if(addChat(msg.yar,msg)) {
-                    const newContact = {
-                        id: msg.yar ,
-                        name: "unknown",
-                    };
-                    setContacts(p=>[newContact,...(p??[])]);
-                }else{
-                    setContacts(p=>moveToFirst(p??[],msg.yar))
-                }}
+        socket.on('msg', async (msg:ChatMessage) => {
+            if(!msg.time)return;
+            if(block.includes(msg.who)){
+                console.log('blocked');
+                socket.emit('blocked',msg.who);
+            }else{
+                addChat(msg.who,msg);
+                setContacts(p=>p?.findIndex(c=>c.id===msg.who)=== -1 ? [{ id: msg.who, name: t('unknown')}, ...(p??[])] : moveToFirst(p||[],msg.who));
+            }
         });
+        socket.on('block', who => {
+            const current = JSON.parse(blocks.getString('by') ?? '[]');
+            if (!current.includes(who)) {
+                current.push(who);
+                blocks.set('by', JSON.stringify(current));
+            }
+        });
+        socket.on('unblock', who => {
+            const current = JSON.parse(blocks.getString('by') ?? '[]')as string[];
+            blocks.set('by', JSON.stringify(current.filter(c => c !== who)));
+        });
+        blocks.addOnValueChangedListener(k=> k==='by' && sblockBy(JSON.parse(blocks.getString('by')??'[]')))
         return ()=>{
             showSubscription.remove();
             hideSubscription.remove();
@@ -169,7 +184,6 @@ const list = () => {
     }
     const loadContacts = async () => {
         try {
-            syar(await AsyncStorage.getItem('uid') || '');
             setContacts(JSON.parse(conty.getString(CONTACTS_KEY)??'[]'));
             sblock(JSON.parse(blocks.getString(CONTACTS_KEY)??'[]'));
         } catch (error:any) {
@@ -200,12 +214,19 @@ const list = () => {
         setContacts(p=>[newContact,...p??[]]);
     };
     const deleteContact = (contactId:string) => {
-        const updatedContacts = contacts?.filter((contact) => contact.id !== contactId);
+        setContacts(p=>p?.filter(c=>c.id != contactId)||p);
         rmChat(contactId)
-        setContacts(updatedContacts??contacts);
     };
     const blockContact = (contactId:string)=>{
-        sblock(p=>p.includes(contactId)?p.filter(id=>id!=contactId):[...p,contactId])
+        sblock(p=>{
+            if(p.includes(contactId)){
+                socket.emit('unblock',contactId,whoami);
+                return p.filter(id=>id!=contactId);
+            }else{
+                socket.emit('block',contactId,whoami);
+                return [...p,contactId];
+            }
+        })
     }
     const showAlert = (contactId:string,ev:"block"|"delete") => {
         const lable = ev==='block' && block.includes(contactId)?'un'+ev:ev;
@@ -217,14 +238,14 @@ const list = () => {
             } }
         ]}))
     };
-    const Conts = useCallback(({item}: { item: Contact,index:number }) => {
+    const Conts = ({item}: { item: Contact,index:number }) => {
 
         const press = ()=>{
             setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:undefined}:v))); 
-            nav.navigate('chating',{uid:item.id,nam:item.name,});
+            nav.navigate('chating',{uid:item.id,nam:item.name,block:block.includes(item.id) || blockBy.includes(item.id)});
         }
-        return <Cont borderColor={borderColor} onBlockPress={()=>showAlert(item.id,'block')} onDeletePress={()=>showAlert(item.id,'delete')} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''} blocked={block.includes(item.id)} contact={item} />
-    },[block])
+        return <Cont borderColor={borderColor} onBlockPress={()=>showAlert(item.id,'block')} onDeletePress={()=>showAlert(item.id,'delete')} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''} blocked={block.includes(item.id)} contact={item} blockedBy={ blockBy.includes(item.id) } />
+    }
 
     return (
         <ThemedView style={styles.container}>
@@ -233,8 +254,8 @@ const list = () => {
                 <ThemedText style={{flex:0.8}} type="title">{t('chats')}</ThemedText>
                 <TouchableOpacity onPress={vis} style={{flex:0.1}}><Ionicons name="add" size={28} color={borderColor} /></TouchableOpacity>
             </ThemedView>
-            <TouchableOpacity style={styles.uid} onLongPress={()=>{clipbord.setStringAsync(yar)}}>
-                <ThemedText type="link">{yar}</ThemedText>
+            <TouchableOpacity style={styles.uid} onLongPress={()=>{clipbord.setStringAsync(whoami)}}>
+                <ThemedText type="link">{whoami}</ThemedText>
             </TouchableOpacity>
             <FlatList data={contacts} keyExtractor={(item) => item.id} initialNumToRender={10} maxToRenderPerBatch={10} windowSize={7} removeClippedSubviews renderItem={Conts}/>
             <Modal visible={modalVisible} animationType='fade' transparent onRequestClose={vis}>
@@ -274,5 +295,5 @@ const styles = StyleSheet.create({
     inp:{ margin: 5, }
 });
 
-export default list;
+export default List;
 
