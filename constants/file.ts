@@ -13,7 +13,6 @@ interface FileInfo {
     name: string;
 }
 type SendChunk = (data: string) => void;
-export const conty = new MMKV({id:'cnt'});
 export const blocks = new MMKV({id:'block'});
 export const settingC = new MMKV({id:'sett'});
 export type writeFunction = (chunk:string) => Promise<string|number>;
