@@ -11,7 +11,7 @@ import {useRoute,useNavigation} from "@react-navigation/native"
 import AntDesign from '@expo/vector-icons/AntDesign';
 import {MaterialIcons} from '@expo/vector-icons/';
 import { TextInput } from 'react-native-gesture-handler';
-import {addChat,readChat,ChatMessage,splitSend, conty, settingC, appPath, blocks} from '@/constants/file';
+import {addChat,readChat,ChatMessage,splitSend, settingC, appPath, blocks} from '@/constants/file';
 import axios from 'axios';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as DocumentPicker from 'expo-document-picker';
@@ -22,6 +22,7 @@ import {Aud} from '@/components/Aud';
 import Alert, { AlertProps } from '@/components/Alert';
 import { useFileProgress } from '@/components/Prog';
 import { ChatBuble } from '@/components/ChatBuble';
+import { ContactDB } from '@/constants/db';
 const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
@@ -58,11 +59,11 @@ export default function Chating() {
                 salrt(p=>({...p,vis:true,title:t('er-read'),discription:`${e.message}`,button:[{txt:t("ok")}]}))
             }
         })
-        socket.on('blocked',who=>{
-            const cont = JSON.parse(conty.getString(CONTACTS_KEY)??'[]')as any[];
-            const name = cont.find(c=>c.id == who)?.name;
-            salrt(p=>({...p,vis:true,title:t('you-block'),discription:t('you-block-from',{name:name}),button:[{txt:t('ok')}]}));
+        socket.on('block',async who=>{
+            const cont = await ContactDB.get(who);
+            salrt(p=>({...p,vis:true,title:t('you-block'),discription:t('you-block-from',{name:cont?.name ?? who}),button:[{txt:t('ok')}]}));
         })
+        ContactDB.edit(uid,{new:null})
         const lis = blocks.addOnValueChangedListener(k=>k==='by'&& schat(blocks.getString('by')?.includes(uid) ?? false))
         return () =>{ 
             lis.remove();
@@ -85,6 +86,7 @@ export default function Chating() {
         if(!txt.trim())return;
         const msg = {msg:txt.trim(),who:whoami,time:Date.now()} as ChatMessage
         flatlis.current?.scrollToEnd({animated:true});
+        console.info('>>>',msg.msg,msg.who)
         socket.emit('chat',uid,msg);
         addChat(uid,msg)
         smgs(readChat(uid))

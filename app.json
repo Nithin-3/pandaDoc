@@ -41,6 +41,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "expo-sqlite",
       "@config-plugins/react-native-pdf",
       "expo-router",
       "expo-video",
@@ -53,7 +54,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#000000"
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true

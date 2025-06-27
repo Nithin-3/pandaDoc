@@ -10,7 +10,7 @@ import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from '@react-navigation/native';
 import socket from '@/constants/Socket';
-import {addChat,rmChat,addChunk,writeFunction,conty,blocks, ChatMessage, settingC, appPath} from '@/constants/file';
+import {addChat,rmChat,addChunk,writeFunction,blocks, ChatMessage, settingC, appPath} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
@@ -18,16 +18,12 @@ import Alert, { AlertProps } from "@/components/Alert";
 import Cont from "@/components/Cont"
 import axios from "axios";
 import {useTranslation} from 'react-i18next';
+import { Contact, ContactDB } from '@/constants/db';
 const CONTACTS_KEY = "chat_contacts";
-interface Contact {
-    id: string;
-    name: string;
-    new?: number;
-}
 const List = () => {
     const {t} = useTranslation();
     const {fileMap,setFileStatus} = useFileProgress();
-    const [contacts, setContacts] = useState<Contact[] | null>(null);
+    const [contacts, setContacts] = useState<Contact[]>([]);
     const [block,sblock] = useState<string[]>(JSON.parse(blocks.getString(CONTACTS_KEY)??'[]'));
     const [blockBy,sblockBy] = useState<string[]>(JSON.parse(blocks.getString('by')??'[]'));
     const [name, sname] = useState("");
@@ -47,14 +43,8 @@ const List = () => {
         })
     },[nav])
     useEffect(() => {
-        contacts && blocks.set(CONTACTS_KEY,JSON.stringify(block))
+        blocks.set(CONTACTS_KEY,JSON.stringify(block))
     }, [block])
-    useEffect(() => {
-        contacts && conty.set(CONTACTS_KEY,JSON.stringify(contacts))
-        sname("");
-        suid("");
-        setModalVisible(false);
-    }, [contacts])
     useEffect(() => {
         socket.emit('set',whoami)
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
@@ -66,7 +56,9 @@ const List = () => {
             onData:(data,peerId)=>{
                 dow.get(peerId)?.(data).then(res=>{
                     if(typeof res == 'string'){
-                        addChat(peerId,{uri:`file://${res}`,who:peerId,time:Date.now()});
+                        if(addChat(peerId,{uri:`file://${res}`,who:peerId,time:Date.now()})){
+                            ContactDB.add({name:t('unknown'),id:peerId})
+                        }
                         dow.delete(peerId);
                         setFileStatus(peerId,{prog:'',name:''});
                     }else if(res == -1){
@@ -126,9 +118,12 @@ const List = () => {
                         },progressDivider:5})
                     const res = await dow.promise;
                     if(res.statusCode === 200){
-                        addChat(yar[0],{uri:`file://${path}`,who:yar[0],time:Date.now()});
+                        if(addChat(yar[0],{uri:`file://${path}`,who:yar[0],time:Date.now()})){
+                            await ContactDB.add({id:yar[0],name:t('unknown')})
+                        }
                         await axios.delete(`https://pandadoc.onrender.com/dow/${whoami}/${url}`)
-                        setContacts(p=>moveToFirst(p??[],yar[0]));
+                        const contact = await ContactDB.get(yar[0]);
+                        await ContactDB.edit(yar[0],{new:contact!.new ? contact!.new + 1 : 1})
                         setFileStatus(yar[0],{name:'',prog:''})
                     }else{
                         if(t('fls!down')== alrt.title){
@@ -145,12 +140,14 @@ const List = () => {
         })
         socket.on('msg', async (msg:ChatMessage) => {
             if(!msg.time)return;
+            console.info('<<<',msg.msg,msg.who);
             if(block.includes(msg.who)){
-                console.log('blocked');
-                socket.emit('blocked',msg.who);
+                console.log('block');
+                socket.emit('block',msg.who,whoami);
             }else{
                 addChat(msg.who,msg);
-                setContacts(p=>p?.findIndex(c=>c.id===msg.who)=== -1 ? [{ id: msg.who, name: t('unknown')}, ...(p??[])] : moveToFirst(p||[],msg.who));
+                const contact = await ContactDB.get(msg.who);
+                contact ? ContactDB.edit(msg.who,{new:contact.new?contact.new+1:1}) : ContactDB.add({id:msg.who,name:t('unknown')});
             }
         });
         socket.on('block', who => {
@@ -165,6 +162,7 @@ const List = () => {
             blocks.set('by', JSON.stringify(current.filter(c => c !== who)));
         });
         blocks.addOnValueChangedListener(k=> k==='by' && sblockBy(JSON.parse(blocks.getString('by')??'[]')))
+        ContactDB.onChange(setContacts)
         return ()=>{
             showSubscription.remove();
             hideSubscription.remove();
@@ -173,18 +171,10 @@ const List = () => {
     }, []);
 
     const vis = () => setModalVisible(p=>!p)
-    function moveToFirst(arr: Contact[], targetId: string): Contact[] {
-        const index = arr.findIndex(item => item.id === targetId);
-        if (index > -1) {
-            const updated = [...arr];
-            const [item] = updated.splice(index, 1);
-            return [{ ...item, new: (item.new || 0) + 1 }, ...updated];
-        }
-        return arr;
-    }
     const loadContacts = async () => {
         try {
-            setContacts(JSON.parse(conty.getString(CONTACTS_KEY)??'[]'));
+            
+            setContacts(await ContactDB.get()??[]);
             sblock(JSON.parse(blocks.getString(CONTACTS_KEY)??'[]'));
         } catch (error:any) {
             salrt(p=>({...p,vis:true,title:t('er-load-contact'),discription:`${error.message}`,button:[
@@ -194,27 +184,24 @@ const List = () => {
     };
     const addContact = async () => {
         if (!name.trim()) return;
-        const index = contacts?.findIndex(item => item.id === uid) ?? -1;
-        if(-1 < index){
-            salrt(p=>({...p,vis:true,title:t('uid-exist',{name:contacts[index]?.name}),discription:t('re-write-contact'),button:[
+        const contact = await ContactDB.get(uid);
+        if(contact){
+            salrt(p=>({...p,vis:true,title:t('uid-exist',{name:contact.name}),discription:t('re-write-contact'),button:[
                 {
                     txt:t('ok'),
-                    onPress:() => setContacts(p=>p?.map(i=>i.id===uid?{...i,name:name.trim()}:i)||[])
+                    onPress:() => ContactDB.edit(uid,{name:name.trim()})
                 },{
                     txt:t('cancel')
                 }
             ]}))
             return;
         }
-        const newContact = {
-            id: uid ,
-            name: name.trim(),
-        };
         addChat(uid,null);
-        setContacts(p=>[newContact,...p??[]]);
+        ContactDB.add({id:uid,name:name.trim()})
+        sname('');suid('');setModalVisible(false);
     };
     const deleteContact = (contactId:string) => {
-        setContacts(p=>p?.filter(c=>c.id != contactId)||p);
+        ContactDB.delete(contactId);
         rmChat(contactId)
     };
     const blockContact = (contactId:string)=>{
@@ -239,9 +226,7 @@ const List = () => {
         ]}))
     };
     const Conts = ({item}: { item: Contact,index:number }) => {
-
         const press = ()=>{
-            setContacts(p=>(p||[]).map(v=>(v.id===item.id?{...v,new:undefined}:v))); 
             nav.navigate('chating',{uid:item.id,nam:item.name,block:block.includes(item.id) || blockBy.includes(item.id)});
         }
         return <Cont borderColor={borderColor} onBlockPress={()=>showAlert(item.id,'block')} onDeletePress={()=>showAlert(item.id,'delete')} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''} blocked={block.includes(item.id)} contact={item} blockedBy={ blockBy.includes(item.id) } />
