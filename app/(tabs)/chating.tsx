@@ -95,8 +95,11 @@ export default function Chating() {
     const changeNam = async ()=>{
         sedit((prevEdit) => {
             if (prevEdit) {
-                const contact = JSON.parse(conty.getString(CONTACTS_KEY)||'[]');
-                conty.set(CONTACTS_KEY,JSON.stringify(contact.map((v: { id: string; }) => (v.id == uid ? { ...v, name: titNam } : v))));
+                if(titNam.trim()){
+                    ContactDB.edit(uid,{name:titNam.trim()})
+                }else{
+                    return prevEdit;
+                }
             } else {
                 setTimeout(()=>title.current?.focus(),100)
             }
