@@ -1,5 +1,5 @@
 import '@/lang/i18n';
-import React, { useState, useEffect, useLayoutEffect, useRef,} from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback,} from "react";
 import {useFileProgress} from '@/components/Prog';
 import { FlatList, TouchableOpacity, StyleSheet, Modal, TouchableWithoutFeedback,Keyboard} from "react-native";
 import { ThemedText } from "@/components/ThemedText";
@@ -19,12 +19,11 @@ import Cont from "@/components/Cont"
 import axios from "axios";
 import {useTranslation} from 'react-i18next';
 import { Contact, ContactDB } from '@/constants/db';
-const CONTACTS_KEY = "chat_contacts";
 const List = () => {
     const {t} = useTranslation();
     const {fileMap,setFileStatus} = useFileProgress();
     const [contacts, setContacts] = useState<Contact[]>([]);
-    const [block,sblock] = useState<string[]>(JSON.parse(blocks.getString(CONTACTS_KEY)??'[]'));
+    const [blockC,sblockC] = useState<string[]>(JSON.parse(blocks.getString('which')??'[]'));
     const [blockBy,sblockBy] = useState<string[]>(JSON.parse(blocks.getString('by')??'[]'));
     const [name, sname] = useState("");
     const [uid, suid] = useState("");
@@ -43,8 +42,8 @@ const List = () => {
         })
     },[nav])
     useEffect(() => {
-        blocks.set(CONTACTS_KEY,JSON.stringify(block))
-    }, [block])
+        blocks.set('which',JSON.stringify(blockC))
+    }, [blockC])
     useEffect(() => {
         socket.emit('set',whoami)
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
@@ -52,18 +51,19 @@ const List = () => {
         peer.current = new P2P({
             onDatOpen:async (peerId)=>{
                 dow.set(peerId,(addChunk(await appPath())));
+                ContactDB.get(peerId)??addChat(peerId,null)
             },
             onData:(data,peerId)=>{
-                dow.get(peerId)?.(data).then(res=>{
+                dow.get(peerId)?.(data).then(async res=>{
                     if(typeof res == 'string'){
+                        const cont = await ContactDB.get(peerId)
                         if(addChat(peerId,{uri:`file://${res}`,who:peerId,time:Date.now()})){
                             ContactDB.add({name:t('unknown'),id:peerId})
+                        }else{
+                            ContactDB.edit(peerId,{new:cont?.new?cont.new?cont.new+1:1:1})
                         }
                         dow.delete(peerId);
                         setFileStatus(peerId,{prog:'',name:''});
-                    }else if(res == -1){
-                        console.log('fail')
-                        // failed
                     }else{
                         setFileStatus(peerId,{prog:res?.toFixed(1)})
                     }
@@ -79,9 +79,9 @@ const List = () => {
         })
 
         socket.on('offer',async (peerId:string,off)=>{
-            if(block.includes(peerId)){
+            if(blockC.includes(peerId)){
                 console.log('blocked');
-                socket.emit('blocked',peerId,whoami);
+                socket.emit('block',peerId,whoami);
                 return;
             }
             peer.current?.setRemDisc(peerId,off);
@@ -103,7 +103,7 @@ const List = () => {
             Promise.all(tree.map(async url=>{
                 try{
                     const sender = url.split('/')[0]
-                    if(block.includes(sender) && !blockSet.has(sender)){
+                    if(blockC.includes(sender) && !blockSet.has(sender)){
                         blockSet.add(sender);
                         console.log('block');
                         socket.emit('block',sender,whoami);
@@ -120,6 +120,9 @@ const List = () => {
                     if(res.statusCode === 200){
                         if(addChat(yar[0],{uri:`file://${path}`,who:yar[0],time:Date.now()})){
                             await ContactDB.add({id:yar[0],name:t('unknown')})
+                        }else{
+                            const cont = await ContactDB.get(yar[0]);
+                            await ContactDB.edit(yar[0],{new:cont?.new?cont.new+1:1});
                         }
                         await axios.delete(`https://pandadoc.onrender.com/dow/${whoami}/${url}`)
                         const contact = await ContactDB.get(yar[0]);
@@ -141,7 +144,7 @@ const List = () => {
         socket.on('msg', async (msg:ChatMessage) => {
             if(!msg.time)return;
             console.info('<<<',msg.msg,msg.who);
-            if(block.includes(msg.who)){
+            if(blockC.includes(msg.who)){
                 console.log('block');
                 socket.emit('block',msg.who,whoami);
             }else{
@@ -175,7 +178,7 @@ const List = () => {
         try {
             
             setContacts(await ContactDB.get()??[]);
-            sblock(JSON.parse(blocks.getString(CONTACTS_KEY)??'[]'));
+            sblockC(JSON.parse(blocks.getString('which')??'[]'));
         } catch (error:any) {
             salrt(p=>({...p,vis:true,title:t('er-load-contact'),discription:`${error.message}`,button:[
                 {txt:t('ok')}
@@ -183,7 +186,7 @@ const List = () => {
         }
     };
     const addContact = async () => {
-        if (!name.trim()) return;
+        if (!name.trim() || !uid.trim()) return;
         const contact = await ContactDB.get(uid);
         if(contact){
             salrt(p=>({...p,vis:true,title:t('uid-exist',{name:contact.name}),discription:t('re-write-contact'),button:[
@@ -194,6 +197,7 @@ const List = () => {
                     txt:t('cancel')
                 }
             ]}))
+            sname('');suid('');setModalVisible(false);
             return;
         }
         addChat(uid,null);
@@ -205,7 +209,7 @@ const List = () => {
         rmChat(contactId)
     };
     const blockContact = (contactId:string)=>{
-        sblock(p=>{
+        sblockC(p=>{
             if(p.includes(contactId)){
                 socket.emit('unblock',contactId,whoami);
                 return p.filter(id=>id!=contactId);
@@ -216,7 +220,7 @@ const List = () => {
         })
     }
     const showAlert = (contactId:string,ev:"block"|"delete") => {
-        const lable = ev==='block' && block.includes(contactId)?'un'+ev:ev;
+        const lable = ev==='block' && blockC.includes(contactId)?'un'+ev:ev;
         salrt(p=>({...p,vis:true,title:t(`${lable}-c`),discription:t(`${lable}-cc`,{name:`${contacts?.filter(e=>e.id==contactId)[0].name}`}),button:[
             {txt:t('cancel')},
             {txt:t(lable),onPress:() =>{
@@ -227,9 +231,9 @@ const List = () => {
     };
     const Conts = ({item}: { item: Contact,index:number }) => {
         const press = ()=>{
-            nav.navigate('chating',{uid:item.id,nam:item.name,block:block.includes(item.id) || blockBy.includes(item.id)});
+            nav.navigate('chating',{uid:item.id,nam:item.name,block:blockC.includes(item.id) || blockBy.includes(item.id)});
         }
-        return <Cont borderColor={borderColor} onBlockPress={()=>showAlert(item.id,'block')} onDeletePress={()=>showAlert(item.id,'delete')} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''} blocked={block.includes(item.id)} contact={item} blockedBy={ blockBy.includes(item.id) } />
+        return <Cont borderColor={borderColor} onBlockPress={()=>showAlert(item.id,'block')} onDeletePress={()=>showAlert(item.id,'delete')} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''} blocked={blockC.includes(item.id)} contact={item} blockedBy={ blockBy.includes(item.id) } />
     }
 
     return (

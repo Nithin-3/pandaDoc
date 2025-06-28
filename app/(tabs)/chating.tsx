@@ -23,7 +23,6 @@ import Alert, { AlertProps } from '@/components/Alert';
 import { useFileProgress } from '@/components/Prog';
 import { ChatBuble } from '@/components/ChatBuble';
 import { ContactDB } from '@/constants/db';
-const CONTACTS_KEY = "chat_contacts";
 type RouteParams = {
     uid: string;
     nam: string;
@@ -230,11 +229,14 @@ export default function Chating() {
                     data={msgs}
                     keyExtractor={(item,index) => `${item.who}-${item.time}-${index}`}
                     renderItem={rendMsg}
-                    initialNumToRender={20}
-                    maxToRenderPerBatch={10}
-                    windowSize={5}
-                    removeClippedSubviews
-                    onLayout={() => flatlis.current?.scrollToEnd({ animated: true })}
+                    initialNumToRender={10}
+                    maxToRenderPerBatch={20}
+                    windowSize={10}
+                    removeClippedSubviews={true}
+                    onEndReachedThreshold={0.2}
+                    onEndReached={()=>{}}
+                    onScrollToTop={()=>{}}
+                    onLayout={() => setTimeout(()=>flatlis.current?.scrollToEnd({ animated: true }),100)}
                 />
                 {fileMap[uid]?.prog &&(<>
                     <ThemedText type='mini'>{fileMap[uid]?.name}</ThemedText>
