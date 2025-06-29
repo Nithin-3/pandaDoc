@@ -11,7 +11,7 @@ import {useRoute,useNavigation} from "@react-navigation/native"
 import AntDesign from '@expo/vector-icons/AntDesign';
 import {MaterialIcons} from '@expo/vector-icons/';
 import { TextInput } from 'react-native-gesture-handler';
-import {addChat,readChat,ChatMessage,splitSend, settingC, appPath, blocks} from '@/constants/file';
+import {addChat,readChat,ChatMessage,splitSend, settingC, appPath, blocks, stor} from '@/constants/file';
 import axios from 'axios';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as DocumentPicker from 'expo-document-picker';
@@ -50,24 +50,18 @@ export default function Chating() {
     useEffect(() => {
         ScreenCapture.preventScreenCaptureAsync();
         smgs(readChat(uid))
-        socket.on('msg',(msg:ChatMessage)=>{
-            try{
-                msg.who == uid &&
-                    setTimeout(async()=>smgs(readChat(uid)),100);
-            }catch(e:any){
-                salrt(p=>({...p,vis:true,title:t('er-read'),discription:`${e.message}`,button:[{txt:t("ok")}]}))
-            }
-        })
         socket.on('block',async who=>{
             const cont = await ContactDB.get(who);
             salrt(p=>({...p,vis:true,title:t('you-block'),discription:t('you-block-from',{name:cont?.name ?? who}),button:[{txt:t('ok')}]}));
         })
         ContactDB.edit(uid,{new:null})
         const lis = blocks.addOnValueChangedListener(k=>k==='by'&& schat(blocks.getString('by')?.includes(uid) ?? false))
+        const chtLis = stor.addOnValueChangedListener(()=>smgs(readChat(uid)))
+
         return () =>{ 
             lis.remove();
+            chtLis.remove();
             ScreenCapture.allowScreenCaptureAsync();
-            socket.off('msg');
         }
     }, []);
     const rqCall = async(vid:boolean=false)=>{
