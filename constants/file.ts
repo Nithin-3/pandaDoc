@@ -1,7 +1,6 @@
 import RNFS from 'react-native-fs'
 import {MMKV} from 'react-native-mmkv'
 const enc = new TextEncoder();
-const stor = new MMKV({id:'cht'});
 const MAX_SIZE = 16000;
 const SAFE_SIZE = Math.floor(MAX_SIZE*3/4);
 type meta = {
@@ -14,6 +13,7 @@ interface FileInfo {
     name: string;
 }
 type SendChunk = (data: string) => void;
+export const stor = new MMKV({id:'cht'});
 export const blocks = new MMKV({id:'block'});
 export const settingC = new MMKV({id:'sett'});
 export type writeFunction = (chunk:string) => Promise<string|number>;

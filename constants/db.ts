@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { ChatMessage } from './file';
 
 export interface Contact {
     id: string;
@@ -21,7 +22,7 @@ export class ContactDB {
         const id = contact.id.replace(/'/g, "''");
         const name = contact.name.replace(/'/g, "''");
         const newVal = contact.new ?? 'NULL';
-        await ContactDB.db!.execAsync( `INSERT OR REPLACE INTO contacts (id, name, new) VALUES ('${id}', '${name}', ${newVal});` );
+        await ContactDB.db!.execAsync( `INSERT OR REPLACE INTO contacts (id, name, new) VALUES ('${id}', '${name}', ${newVal});`);
         await this.emit();
     }
 
@@ -85,3 +86,18 @@ export class ContactDB {
     }
 }
 
+export class Chat {
+    chat:SQLite.SQLiteDatabase|null = null;
+    constructor(private uid:string) {
+        this.init();
+    }
+    private async init(){
+        this.chat = await SQLite.openDatabaseAsync('chat.db');
+        this.chat.execAsync(`CREATE IF NOT EXISTS ${this.uid} (msg TEXT, uri TEXT, who TEXT NOT NULL, time INTEGER NOT NULL PRIMARY KEY)`)
+    }
+
+    async add(message:ChatMessage[]){
+        if(!message.length) return;
+        await this.chat?.execAsync(`INSERT OR REPLACE INTO ${this.uid} (msg, uri, who, time) VALUES ${ (await Promise.all(message.map(async v =>`(${v.msg ? v.msg.replace(/'/g, "") : 'NULL'}, ${v.uri ? v.uri.replace(/'/g, "") : 'NULL'}, ${v.who.replace(/'/g, "")}, ${v.time})`))).join(', ')};`);
+    }
+}
