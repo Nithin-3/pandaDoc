@@ -9,12 +9,12 @@ import { useNavigation } from 'expo-router';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import Drop from "@/components/Drop";
 import { settingC } from '@/constants/file';
+import { Routes } from './navType';
 export default function Setting() {
     const { t, i18n } = useTranslation();
-    const route = useRoute();
     const nav = useNavigation();
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
-    const forDoc = (route.params as { forDoc?: boolean })?.forDoc ?? false;
+    const forDoc = (useRoute().params as Routes['setting'])?.forDoc ?? false;
 
     const langs = [
         { label: 'English', value: 'en' },

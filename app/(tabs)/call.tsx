@@ -9,13 +9,9 @@ import {useRoute,useNavigation} from "@react-navigation/native"
 import { peer } from '@/constants/webrtc';
 import socket from '@/constants/Socket';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-type RouteParams = {
-    uid:string;
-    nam:string;
-    cal:'IN'|'ON'|'DIA';
-}
+import { Routes } from './navType';
 export default function Call(){
-    const { uid, nam , cal } = useRoute().params as RouteParams;
+    const { uid, nam , cal } = useRoute().params as Routes['call'];
     const [remAud,sremAud] = useState(true);
     const [locAud,slocAud] = useState(true);
     const [yar,syar] = useState('');
@@ -36,11 +32,9 @@ export default function Call(){
         let active = true;
         AsyncStorage.getItem("uid").then(e => e ?? '').then(syar);
         (async () => {
-            const locStrm = await peer!.getLocStrm();
-            const remStrm = await peer!.getRemStrm(uid);
             if (active) {
-                setLocalStream(locStrm);
-                setRemoteStream(remStrm);
+                setLocalStream(peer!.getLocStrm());
+                setRemoteStream(peer!.getRemStrm(uid));
             }
         })();
         const remStrm = (strm: MediaStream, peerId: string) => {
