@@ -22,20 +22,21 @@ import {Aud} from '@/components/Aud';
 import Alert, { AlertProps } from '@/components/Alert';
 import { useFileProgress } from '@/components/Prog';
 import { ChatBuble } from '@/components/ChatBuble';
-import { ContactDB } from '@/constants/db';
+import { ChatStor, ContactDB } from '@/constants/db';
 type RouteParams = {
     uid: string;
     nam: string;
     block:boolean;
+    blockby:boolean;
 };
 export default function Chating() {
     const {t} = useTranslation();
-    const { uid, nam, block,} = useRoute().params as RouteParams;
+    const { uid, nam, block,blockby} = useRoute().params as RouteParams;
     const {width } = Dimensions.get('window')
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const {fileMap} = useFileProgress()
     const whoami = settingC.getString('uid') ?? '';
-    const [chat,schat] = useState(block);
+    const [convo,sconvo] = useState(blockby);
     const [txt,stxt] = useState('');
     const [titNam,stitNam] = useState(nam);
     const [msgs,smgs] = useState<ChatMessage[]>([]);
@@ -55,7 +56,7 @@ export default function Chating() {
             salrt(p=>({...p,vis:true,title:t('you-block'),discription:t('you-block-from',{name:cont?.name ?? who}),button:[{txt:t('ok')}]}));
         })
         ContactDB.edit(uid,{new:null})
-        const lis = blocks.addOnValueChangedListener(k=>k==='by'&& schat(blocks.getString('by')?.includes(uid) ?? false))
+        const lis = blocks.addOnValueChangedListener(k=>k==='by'&& sconvo(blocks.getString('by')?.includes(uid) ?? false))
         const chtLis = stor.addOnValueChangedListener(()=>smgs(readChat(uid)))
 
         return () =>{ 
@@ -77,12 +78,10 @@ export default function Chating() {
 
     const sendMsg = async()=>{
         if(!txt.trim())return;
-        const msg = {msg:txt.trim(),who:whoami,time:Date.now()} as ChatMessage
+        const msg = {msg:txt.trim(),who:whoami,time:Date.now()};
         flatlis.current?.scrollToEnd({animated:true});
-        console.info('>>>',msg.msg,msg.who)
         socket.emit('chat',uid,msg);
-        addChat(uid,msg)
-        smgs(readChat(uid))
+        addChat(uid,{...msg,uid})
         stxt('');
     }
     const changeNam = async ()=>{
@@ -129,7 +128,7 @@ export default function Chating() {
     const cpUri = async(uri:string,filename:string)=>{
         const path = `${await appPath()}${filename}`
         await RNFS.copyFile(uri,path);
-        addChat(uid,{uri:`file://${path}`,who:whoami,time:Date.now()});
+        addChat(uid,{uri:`file://${path}`,who:whoami,time:Date.now(), uid});
         smgs(readChat(uid))
     }
     const sendFls = async () => {
@@ -221,7 +220,7 @@ export default function Chating() {
                 <FlatList
                     ref={flatlis}
                     data={msgs}
-                    keyExtractor={(item,index) => `${item.who}-${item.time}-${index}`}
+                    keyExtractor={(item,index) => `${item.time}-${index}`}
                     renderItem={rendMsg}
                     initialNumToRender={10}
                     maxToRenderPerBatch={20}
@@ -229,8 +228,14 @@ export default function Chating() {
                     removeClippedSubviews={true}
                     onEndReachedThreshold={0.2}
                     onEndReached={()=>{}}
-                    onScrollToTop={()=>{}}
-                    onLayout={() => setTimeout(()=>flatlis.current?.scrollToEnd({ animated: true }),100)}
+                    onScrollToTop={async ()=>{
+                        console.log('top')
+                        const pst = await ChatStor.cat(uid,msgs[0].time!);
+                        if(pst.length){
+                            smgs(p=>([...pst,...p]))
+                        }
+                    }}
+                    onLayout={() => setTimeout(()=>flatlis.current?.scrollToEnd({ animated: false }),100)}
                 />
                 {fileMap[uid]?.prog &&(<>
                     <ThemedText type='mini'>{fileMap[uid]?.name}</ThemedText>
@@ -244,7 +249,7 @@ export default function Chating() {
                 }
                 <ThemedView style={style.eventArea}>
                     <ThemedView style={[style.textArea,{borderColor}]} >
-                        {chat?
+                        {convo||block?
                             <ThemedText>{t('no-conv')}</ThemedText>
                             :<>
                                 <ThemedInput style={style.inputfield} placeholder='Tyye...' value={txt} onChangeText={stxt} />

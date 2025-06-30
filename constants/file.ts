@@ -20,6 +20,7 @@ export type writeFunction = (chunk:string) => Promise<string|number>;
 export type ChatMessage = {
     msg?: string;
     uri?:string;
+    uid:string;
     time:number|undefined;
     who: string;
 };
@@ -41,8 +42,8 @@ export const addChat = (uid:string,msg:ChatMessage|null):boolean=>{
 };
 export const readChat = (uid:string):ChatMessage[]=>JSON.parse(stor.getString(uid) ?? '[]') as ChatMessage[]
 export const rmChat = (uid:string):void=>{
-    stor.delete(uid)
     readChat(uid).map(async msg=>msg.uri&&await RNFS.unlink(msg.uri.replace('file://', '')).catch(_e=>{}))
+    stor.delete(uid)
 }
 export const splitSend = async (file: FileInfo, send: SendChunk): Promise<boolean> => {
     const { uri, name,} = file;
