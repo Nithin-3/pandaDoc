@@ -19,6 +19,7 @@ import Cont from "@/components/Cont"
 import axios from "axios";
 import {useTranslation} from 'react-i18next';
 import { Contact, ContactDB } from '@/constants/db';
+import { chatProp } from './navType';
 const List = () => {
     const {t} = useTranslation();
     const {fileMap,setFileStatus} = useFileProgress();
@@ -33,7 +34,7 @@ const List = () => {
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const peer = useRef<P2P|null>(null);
     const dow = useRef(new Map<string,writeFunction>()).current;
-    const nav = useNavigation();
+    const nav = useNavigation<chatProp>();
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     useLayoutEffect(()=>{
         return nav.addListener('focus', () => {
@@ -230,7 +231,7 @@ const List = () => {
     };
     const Conts = ({item}: { item: Contact,index:number }) => {
         const press = ()=>{
-            nav.navigate('chating',{uid:item.id,nam:item.name,block:blockC.includes(item.id),blockby: blockBy.includes(item.id)});
+            nav.navigate('chat',{uid:item.id,nam:item.name,block:blockC.includes(item.id),blockby: blockBy.includes(item.id)});
         }
         return <Cont borderColor={borderColor} onBlockPress={()=>showAlert(item.id,'block')} onDeletePress={()=>showAlert(item.id,'delete')} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''} blocked={blockC.includes(item.id)} contact={item} blockedBy={ blockBy.includes(item.id) } />
     }

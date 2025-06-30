@@ -23,15 +23,10 @@ import Alert, { AlertProps } from '@/components/Alert';
 import { useFileProgress } from '@/components/Prog';
 import { ChatBuble } from '@/components/ChatBuble';
 import { ChatStor, ContactDB } from '@/constants/db';
-type RouteParams = {
-    uid: string;
-    nam: string;
-    block:boolean;
-    blockby:boolean;
-};
-export default function Chating() {
+import { callProp, Routes } from './navType';
+export default function Chat() {
     const {t} = useTranslation();
-    const { uid, nam, block,blockby} = useRoute().params as RouteParams;
+    const { uid, nam, block,blockby} = useRoute().params as Routes['chat'];
     const {width } = Dimensions.get('window')
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const {fileMap} = useFileProgress()
@@ -47,7 +42,7 @@ export default function Chating() {
     const [alrt,salrt] = useState<AlertProps>({vis:false,setVis:()=>{salrt(p=>({...p, vis:false,title:'',discription:'',button:[]}))},title:'',discription:'',button:[]});
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
-    const nav = useNavigation();
+    const nav = useNavigation<callProp>();
     useEffect(() => {
         ScreenCapture.preventScreenCaptureAsync();
         smgs(readChat(uid))
@@ -55,6 +50,9 @@ export default function Chating() {
             const cont = await ContactDB.get(who);
             salrt(p=>({...p,vis:true,title:t('you-block'),discription:t('you-block-from',{name:cont?.name ?? who}),button:[{txt:t('ok')}]}));
         })
+        if(settingC.getNumber(uid)){
+            settingC.set(uid,1);
+        }
         ContactDB.edit(uid,{new:null})
         const lis = blocks.addOnValueChangedListener(k=>k==='by'&& sconvo(blocks.getString('by')?.includes(uid) ?? false))
         const chtLis = stor.addOnValueChangedListener(()=>smgs(readChat(uid)))
@@ -65,6 +63,12 @@ export default function Chating() {
             ScreenCapture.allowScreenCaptureAsync();
         }
     }, []);
+    useEffect(()=>{
+        if(msgs.length % 50 == 0 && msgs[50 * msgs.length / 50 - 50].time! > (settingC.getNumber(uid)??0)){
+            ChatStor.touch(msgs.slice(50 * msgs.length / 50 - 50,-1))
+            settingC.set(uid,msgs[-1].time!)
+        }
+    },[msgs])
     const rqCall = async(vid:boolean=false)=>{
         const on = await axios.get(`https://pandadoc.onrender.com/${uid}`)
         if(on.data){

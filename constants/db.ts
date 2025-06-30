@@ -1,7 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { ChatMessage } from './file';
-import {Realm} from 'realm';
-
+import {Realm} from '@realm/react';
 export interface Contact {
     id: string;
     name: string;
@@ -88,24 +87,15 @@ export class ContactDB {
 }
 
 class Chat extends Realm.Object<ChatMessage>{
-    _id!:Realm.BSON.ObjectId;
     msg?:string;
     uri?:string;
     uid!:string;
     who!:string;
     time!:number;
-    static schema:Realm.ObjectSchema={
-        name:'Chat',
-        primaryKey:'_id',
-        properties:{
-            _id:'objectId',
-            msg:'string?',
-            uri:"string?",
-            uid:'string',
-            who:'string',
-            time:'int'
-        }
-    };
+    static primaryKey = 'time';
+    constructor(realm:Realm,_id:Realm.BSON.ObjectId,uid:string,who:string,time:number,msg?:string,uri?:string,){
+        super(realm,{msg,uri,uid,who,time})
+    }
 }
 
 export class ChatStor {
@@ -121,13 +111,13 @@ export class ChatStor {
         const realm = await this.init();
         realm.write(()=>{
             for(const msg of message){
-                realm.create('Chat',{_id:new Realm.BSON.ObjectId(),...msg});
+                realm.create('Chat',msg);
             }
         })
     }
     static async cat(uid:string,time:number,direction:'<'|'>'='<'):Promise<ChatMessage[]>{
         const realm = await this.init();
-        return realm.objects(Chat).filtered(`time ${direction} $0 AND uid == $1`,time,uid).sorted('time').slice(0,50).map(({msg, uri, who, time, _id, uid})=>({uid, _id, msg, uri, who, time}));
+        return realm.objects(Chat).filtered(`time ${direction} $0 AND uid == $1`,time,uid).sorted('time').slice(0,50).map(({msg, uri, who, time, uid})=>({uid, msg, uri, who, time}));
     }
 
     static async rm(time:number):Promise<void>;

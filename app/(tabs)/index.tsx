@@ -10,9 +10,10 @@ import  ManageExternalStorage  from 'react-native-external-storage-permission';
 import socket from '@/constants/Socket';
 import {useTranslation} from 'react-i18next';
 import { MaterialIcons, } from '@expo/vector-icons';
+import { allProp } from './navType';
 export default function HomeScreen() {
     const {t} = useTranslation();
-    const nav = useNavigation();
+    const nav = useNavigation<allProp>();
     const [file, setfile] = useState<{ path: string; name: string }[]>([]);
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
     const [cht,sCht] = useState(false);
