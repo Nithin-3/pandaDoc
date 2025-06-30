@@ -1,5 +1,5 @@
 import '@/lang/i18n';
-import React, { useState, useEffect, useLayoutEffect, useRef, useCallback,} from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef,} from "react";
 import {useFileProgress} from '@/components/Prog';
 import { FlatList, TouchableOpacity, StyleSheet, Modal, TouchableWithoutFeedback,Keyboard} from "react-native";
 import { ThemedText } from "@/components/ThemedText";
@@ -57,7 +57,7 @@ const List = () => {
                 dow.get(peerId)?.(data).then(async res=>{
                     if(typeof res == 'string'){
                         const cont = await ContactDB.get(peerId)
-                        if(addChat(peerId,{uri:`file://${res}`,who:peerId,time:Date.now()})){
+                        if(addChat(peerId,{uri:`file://${res}`,who:peerId,time:Date.now(),uid:peerId})){
                             ContactDB.add({name:t('unknown'),id:peerId})
                         }else{
                             ContactDB.edit(peerId,{new:cont?.new?cont.new?cont.new+1:1:1})
@@ -118,7 +118,7 @@ const List = () => {
                         },progressDivider:5})
                     const res = await dow.promise;
                     if(res.statusCode === 200){
-                        if(addChat(yar[0],{uri:`file://${path}`,who:yar[0],time:Date.now()})){
+                        if(addChat(yar[0],{uri:`file://${path}`,who:yar[0],time:Date.now(),uid:yar[0]})){
                             await ContactDB.add({id:yar[0],name:t('unknown')})
                         }else{
                             const cont = await ContactDB.get(yar[0]);
@@ -143,12 +143,11 @@ const List = () => {
         })
         socket.on('msg', async (msg:ChatMessage) => {
             if(!msg.time)return;
-            console.info('<<<',msg.msg,msg.who);
             if(blockC.includes(msg.who)){
                 console.log('block');
                 socket.emit('block',msg.who,whoami);
             }else{
-                addChat(msg.who,msg);
+                addChat(msg.who,{...msg,uid:msg.who});
                 const contact = await ContactDB.get(msg.who);
                 contact ? ContactDB.edit(msg.who,{new:contact.new?contact.new+1:1}) : ContactDB.add({id:msg.who,name:t('unknown')});
             }
@@ -231,7 +230,7 @@ const List = () => {
     };
     const Conts = ({item}: { item: Contact,index:number }) => {
         const press = ()=>{
-            nav.navigate('chating',{uid:item.id,nam:item.name,block:blockC.includes(item.id) || blockBy.includes(item.id)});
+            nav.navigate('chating',{uid:item.id,nam:item.name,block:blockC.includes(item.id),blockby: blockBy.includes(item.id)});
         }
         return <Cont borderColor={borderColor} onBlockPress={()=>showAlert(item.id,'block')} onDeletePress={()=>showAlert(item.id,'delete')} press={press} prog={fileMap[item.id]?.prog??''} pName={fileMap[item.id]?.name??''} blocked={blockC.includes(item.id)} contact={item} blockedBy={ blockBy.includes(item.id) } />
     }

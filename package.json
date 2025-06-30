@@ -22,6 +22,7 @@
     "@react-native-community/slider": "4.5.5",
     "@react-navigation/bottom-tabs": "^7.2.0",
     "@react-navigation/native": "^7.0.14",
+    "@realm/react": "^0.11.0",
     "axios": "^1.9.0",
     "expo": "~52.0.47",
     "expo-audio": "~0.3.5",
@@ -37,6 +38,7 @@
     "expo-router": "~4.0.21",
     "expo-screen-capture": "~7.0.1",
     "expo-splash-screen": "~0.29.21",
+    "expo-sqlite": "~15.1.4",
     "expo-status-bar": "~2.0.1",
     "expo-symbols": "~0.2.2",
     "expo-system-ui": "~4.0.8",
@@ -64,8 +66,7 @@
     "react-native-web": "~0.19.13",
     "react-native-webrtc": "^124.0.5",
     "react-native-webview": "13.12.5",
-    "socket.io-client": "^4.8.1",
-    "expo-sqlite": "~15.1.4"
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
