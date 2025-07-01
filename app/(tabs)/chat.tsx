@@ -1,6 +1,6 @@
 import '@/lang/i18n';
 import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,Modal, Image, Dimensions,} from 'react-native'
-import { useEffect,useState,useRef, } from "react";
+import { useEffect,useState,useRef, useCallback, } from "react";
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedInput } from '@/components/ThemedInput';
@@ -22,10 +22,12 @@ import {Aud} from '@/components/Aud';
 import Alert, { AlertProps } from '@/components/Alert';
 import { useFileProgress } from '@/components/Prog';
 import { ChatBuble } from '@/components/ChatBuble';
-import { ChatStor, ContactDB } from '@/constants/db';
+import { ContactDB, ChatDB, Chat as ct } from '@/constants/db';
 import { callProp, Routes } from './navType';
+const {useRealm} = ChatDB;
 export default function Chat() {
     const {t} = useTranslation();
+    const realm = useRealm()
     const { uid, nam, block,blockby} = useRoute().params as Routes['chat'];
     const {width } = Dimensions.get('window')
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
@@ -65,7 +67,9 @@ export default function Chat() {
     }, []);
     useEffect(()=>{
         if(msgs.length % 50 == 0 && msgs[50 * msgs.length / 50 - 50].time! > (settingC.getNumber(uid)??0)){
-            ChatStor.touch(msgs.slice(50 * msgs.length / 50 - 50,-1))
+            for(const msg of msgs){
+                realm.write(()=> new ct(realm, uid, msg.who, msg.time!, msg.msg, msg.uri))
+            }
             settingC.set(uid,msgs[-1].time!)
         }
     },[msgs])
@@ -232,13 +236,13 @@ export default function Chat() {
                     removeClippedSubviews={true}
                     onEndReachedThreshold={0.2}
                     onEndReached={()=>{}}
-                    onScrollToTop={async ()=>{
+                    onScrollToTop={ useCallback(async ()=>{
                         console.log('top')
-                        const pst = await ChatStor.cat(uid,msgs[0].time!);
+                        const pst = realm.objects(ct).filtered(`time < $0 AND uid == $1`,msgs[0].time, uid).sorted('time').slice(0,50).map(({msg, uri, who, time, uid})=>({uid, msg, uri, who, time}))
                         if(pst.length){
                             smgs(p=>([...pst,...p]))
                         }
-                    }}
+                    },[msgs])}
                     onLayout={() => setTimeout(()=>flatlis.current?.scrollToEnd({ animated: false }),100)}
                 />
                 {fileMap[uid]?.prog &&(<>
