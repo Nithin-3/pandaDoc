@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { ChatMessage } from './file';
-import {Realm} from '@realm/react';
+import {Realm,createRealmContext} from '@realm/react';
 export interface Contact {
     id: string;
     name: string;
@@ -86,58 +86,59 @@ export class ContactDB {
     }
 }
 
-class Chat extends Realm.Object<ChatMessage>{
+export class Chat extends Realm.Object<ChatMessage>{
     msg?:string;
     uri?:string;
     uid!:string;
     who!:string;
     time!:number;
     static primaryKey = 'time';
-    constructor(realm:Realm,_id:Realm.BSON.ObjectId,uid:string,who:string,time:number,msg?:string,uri?:string,){
+    constructor(realm:Realm,uid:string,who:string,time:number,msg?:string,uri?:string,){
         super(realm,{msg,uri,uid,who,time})
     }
 }
 
-export class ChatStor {
-    static instance:Realm|null = null;
-    static async init(){
-        if(!this.instance || this.instance.isClosed){
-            this.instance = await Realm.open({schema:[Chat]});
-        }
-        return this.instance
-    }
+export const ChatDB = createRealmContext({schema:[Chat]});
+// export class ChatStor {
+//     static instance:Realm|null = null;
+//     static async init(){
+//         if(!this.instance || this.instance.isClosed){
+//             this.instance = await Realm.open({schema:[Chat]});
+//         }
+//         return this.instance
+//     }
 
-    static async touch(message:ChatMessage[]):Promise<void>{
-        const realm = await this.init();
-        realm.write(()=>{
-            for(const msg of message){
-                realm.create('Chat',msg);
-            }
-        })
-    }
-    static async cat(uid:string,time:number,direction:'<'|'>'='<'):Promise<ChatMessage[]>{
-        const realm = await this.init();
-        return realm.objects(Chat).filtered(`time ${direction} $0 AND uid == $1`,time,uid).sorted('time').slice(0,50).map(({msg, uri, who, time, uid})=>({uid, msg, uri, who, time}));
-    }
+//     static async touch(message:ChatMessage[]):Promise<void>{
+//         const realm = await this.init();
+//         realm.write(()=>{
+//             for(const msg of message){
+//                 realm.create('Chat',msg);
+//             }
+//         })
+//     }
+//     static async cat(uid:string,time:number,direction:'<'|'>'='<'):Promise<ChatMessage[]>{
+//         const realm = await this.init();
+//         return realm.objects(Chat).filtered(`time ${direction} $0 AND uid == $1`,time,uid).sorted('time').slice(0,50).map(({msg, uri, who, time, uid})=>({uid, msg, uri, who, time}));
+//     }
 
-    static async rm(time:number):Promise<void>;
-    static async rm(id:string):Promise<void>;
-    static async rm(param:number|string):Promise<void>{
-        const realm = await this.init();
-        if(typeof param === 'string'){
-            const msg = realm.objectForPrimaryKey(Chat,param);
-            if(msg){
-                realm.write(()=>{
-                    realm.delete(msg);
-                });
-            }
-        }else{
-            const msg = realm.objects(Chat).filtered('time == $0',param);
-            if(msg.length){
-                realm.write(()=>{
-                    realm.delete(msg);
-                });
-            }
-        }
-    }
-}
+//     static async rm(time:number):Promise<void>;
+//     static async rm(id:string):Promise<void>;
+//     static async rm(param:number|string):Promise<void>{
+//         const realm = await this.init();
+//         if(typeof param === 'string'){
+//             const msg = realm.objectForPrimaryKey(Chat,param);
+//             if(msg){
+//                 realm.write(()=>{
+//                     realm.delete(msg);
+//                 });
+//             }
+//         }else{
+//             const msg = realm.objects(Chat).filtered('time == $0',param);
+//             if(msg.length){
+//                 realm.write(()=>{
+//                     realm.delete(msg);
+//                 });
+//             }
+//         }
+//     }
+// }
