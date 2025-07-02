@@ -5,9 +5,9 @@ export const schema = appSchema({
         tableSchema({
             name:'chat',
             columns:[
-                {name:'msg',type:'string'},
-                {name:'uri',type:'string'},
-                {name:'time',type:'number'},
+                {name:'msg',type:'string',isOptional:true},
+                {name:'uri',type:'string',isOptional:true},
+                {name:'time',type:'number',isIndexed:true},
                 {name:'who',type:'string'},
                 {name:'uid',type:'string'}
             ]
@@ -16,8 +16,8 @@ export const schema = appSchema({
             name:'contact',
             columns:[
                 {name:'name',type:'string'},
-                {name:'uid',type:'string'},
-                {name:'new',type:'number'},
+                {name:'uid',type:'string',isIndexed:true},
+                {name:'new',type:'number',isOptional:true},
                 {name:'at',type:'number'}
             ]
         })
