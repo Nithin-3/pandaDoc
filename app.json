@@ -46,6 +46,7 @@
       "expo-router",
       "expo-video",
       "expo-audio",
+      "@morrowdigital/watermelondb-expo-plugin",
       [
         "expo-splash-screen",
         {

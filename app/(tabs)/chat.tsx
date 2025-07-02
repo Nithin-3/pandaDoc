@@ -180,9 +180,7 @@ export default function Chat() {
                                 file.forEach((fil,i)=>{
                                     i<10&&data.append('files',{uri:fil.uri,name:fil.name,type:fil.mimeType || 'application/octet-stream'})
                                 })
-                                axios.post(`https://pandadoc.onrender.com/`,data,{headers:{'Content-Type': 'multipart/form-data',auth:whoami},onUploadProgress:(prog)=>{
-                                    sprog(Math.round(prog.loaded/(prog.total || 1) * 100))
-                                }}).then(async v=>{
+                                axios.post(`https://pandadoc.onrender.com/`,data,{headers:{'Content-Type': 'multipart/form-data',auth:whoami},onUploadProgress:(prog)=>{sprog(Math.round(prog.loaded/(prog.total || 1) * 100))}}).then(async v=>{
                                         await Promise.all([sfile(p=>{
                                             p.splice(0,v.data).map(f=>cpUri(f.uri,f.name));
                                             return p;
