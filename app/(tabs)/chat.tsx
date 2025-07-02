@@ -22,12 +22,10 @@ import {Aud} from '@/components/Aud';
 import Alert, { AlertProps } from '@/components/Alert';
 import { useFileProgress } from '@/components/Prog';
 import { ChatBuble } from '@/components/ChatBuble';
-import { ContactDB, ChatDB, Chat as ct } from '@/constants/db';
+import { ContactDB } from '@/constants/db';
 import { callProp, Routes } from './navType';
-const {useRealm} = ChatDB;
 export default function Chat() {
     const {t} = useTranslation();
-    const realm = useRealm()
     const { uid, nam, block,blockby} = useRoute().params as Routes['chat'];
     const {width } = Dimensions.get('window')
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
@@ -67,9 +65,7 @@ export default function Chat() {
     }, []);
     useEffect(()=>{
         if(msgs.length % 50 == 0 && msgs[50 * msgs.length / 50 - 50].time! > (settingC.getNumber(uid)??0)){
-            for(const msg of msgs){
-                realm.write(()=> new ct(realm, uid, msg.who, msg.time!, msg.msg, msg.uri))
-            }
+            
             settingC.set(uid,msgs[-1].time!)
         }
     },[msgs])
@@ -236,10 +232,6 @@ export default function Chat() {
                     onEndReached={()=>{}}
                     onScrollToTop={ useCallback(async ()=>{
                         console.log('top')
-                        const pst = realm.objects(ct).filtered(`time < $0 AND uid == $1`,msgs[0].time, uid).sorted('time').slice(0,50).map(({msg, uri, who, time, uid})=>({uid, msg, uri, who, time}))
-                        if(pst.length){
-                            smgs(p=>([...pst,...p]))
-                        }
                     },[msgs])}
                     onLayout={() => setTimeout(()=>flatlis.current?.scrollToEnd({ animated: false }),100)}
                 />
