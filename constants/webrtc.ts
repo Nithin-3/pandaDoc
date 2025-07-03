@@ -1,4 +1,7 @@
-import {mediaDevices,MediaStream,RTCPeerConnection,RTCIceCandidate,RTCSessionDescription,RTCDataChannel} from 'react-native-webrtc'
+import {mediaDevices,MediaStream,RTCPeerConnection,RTCIceCandidate,RTCSessionDescription, MediaStreamTrack} from 'react-native-webrtc'
+import { MediaTrackConstraints } from 'react-native-webrtc/lib/typescript/Constraints';
+import RTCDataChannel from 'react-native-webrtc/lib/typescript/RTCDataChannel';
+import { RTCSessionDescriptionInit } from 'react-native-webrtc/lib/typescript/RTCSessionDescription';
 export interface Handlers {
     onRemStrm?:(strm:MediaStream,peerId:string) => void;
     onICE?:(candidate:RTCIceCandidate,peerId:string) => void;
@@ -56,9 +59,11 @@ export class P2P{
         if(pr) return pr;
         const peer = new RTCPeerConnection(config)
         this.locStream && this.locStream.getTracks().forEach(t=>peer.addTrack(t,this.locStream!))
+        // @ts-ignore
         peer.onicecandidate = e=>{
             e.candidate && this.handlers.onICE?.(e.candidate,peerId);
         }
+        // @ts-ignore
        peer.oniceconnectionstatechange = () => {
             const state = peer.iceConnectionState;
             if (state === 'disconnected' || state === 'failed' || state === 'closed') {
@@ -66,6 +71,7 @@ export class P2P{
                 this.close(peerId)
             }
         }
+        // @ts-ignore
         peer.ontrack = e=>{
             let stream = this.remStream.get(peerId);
             if (!stream) {
@@ -79,6 +85,7 @@ export class P2P{
             const dataChannel = peer.createDataChannel('chat',{ordered:true});
             this.setDatChannel(dataChannel,peerId);
         } else {
+        // @ts-ignore
             peer.ondatachannel = (event:any) => {
                 const dataChannel = event.channel;
                 this.setDatChannel(dataChannel,peerId);
@@ -96,18 +103,22 @@ export class P2P{
     }
 
     private setDatChannel(chan:RTCDataChannel,peerId:string){
+        // @ts-ignore
         chan.onopen = () => {
             this.handlers.onDatOpen?.(peerId);
         };
 
+        // @ts-ignore
         chan.onclose = () => {
             this.handlers.onDatClose?.(peerId);
             this.close(peerId)
         };
 
+        // @ts-ignore
         chan.onerror = (e:any) => {
             console.error('[RTC] DataChannel error', e);
         };
+        // @ts-ignore
         chan.onmessage = (e:any) => {
             this.handlers.onData?.(e.data,peerId);
         };

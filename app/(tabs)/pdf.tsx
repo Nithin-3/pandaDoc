@@ -5,11 +5,11 @@ import {useNavigation, useRoute} from "@react-navigation/native"
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { ThemedText } from '@/components/ThemedText';
 import { Ionicons } from '@expo/vector-icons';
-type RouteParams = {uri:string}
+import {Routes} from '@/constants/navType'
 const PDFViewer = () => {
     const nav = useNavigation();
     const borderColor=useThemeColor({},'text');
-    const { uri } = useRoute().params as RouteParams;
+    const { uri } = useRoute().params as Routes['pdf'];
     const backgroundColor = useThemeColor({}, 'background');
   return (
     <ThemedView style={{ flex: 1 }}>

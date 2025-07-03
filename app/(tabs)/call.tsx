@@ -1,6 +1,6 @@
 import {TouchableOpacity,StyleSheet} from 'react-native';
 import {useState,useLayoutEffect, useEffect} from "react";
-import {RTCView} from "react-native-webrtc"
+import {MediaStream, RTCView} from "react-native-webrtc"
 import {MaterialIcons} from '@expo/vector-icons/';
 import {ThemedText} from '@/components/ThemedText';
 import {ThemedView} from '@/components/ThemedView';
@@ -8,7 +8,7 @@ import {useThemeColor} from "@/hooks/useThemeColor"
 import {useRoute,useNavigation} from "@react-navigation/native"
 import { peer } from '@/constants/webrtc';
 import socket from '@/constants/Socket';
-import { Routes } from './navType';
+import { Routes } from '@/constants/navType';
 import { settingC } from '@/constants/file';
 export default function Call(){
     const { uid, nam , cal } = useRoute().params as Routes['call'];
@@ -65,7 +65,7 @@ export default function Call(){
         }else{
             localStream?.getTracks().forEach(t=>t.stop());
             const fli = await peer!.stStrm({facingMode : flip? "environment":"user"},uid)!;
-            await peer!.replaceVid(fli?.getVideoTracks()[0],uid);
+            await peer!.replaceVid(fli.getVideoTracks()[0],uid);
             setLocalStream(fli);
         }
         sflip(p=>!p)
@@ -89,6 +89,7 @@ export default function Call(){
     }
     return (
         <ThemedView style={style.chat}>
+            <ThemedText>{nam}</ThemedText>
             <ThemedView style={style.videoHalf}>
                 {localStream && (
                     <RTCView streamURL={localStream.toURL()} objectFit="cover" mirror={flip} style={StyleSheet.absoluteFill} />

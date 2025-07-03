@@ -1,5 +1,5 @@
 import '@/lang/i18n';
-import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,Modal, Image, Dimensions,} from 'react-native'
+import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,Modal, Image, Dimensions, TextInput,} from 'react-native'
 import { useEffect,useState,useRef, useCallback, } from "react";
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
@@ -8,9 +8,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import socket from '@/constants/Socket';
 import {useRoute,useNavigation} from "@react-navigation/native"
-import AntDesign from '@expo/vector-icons/AntDesign';
-import {MaterialIcons} from '@expo/vector-icons/';
-import { TextInput } from 'react-native-gesture-handler';
+import {MaterialIcons,AntDesign} from '@expo/vector-icons/';
 import {splitSend, settingC, appPath, blocks} from '@/constants/file';
 import axios from 'axios';
 import * as ScreenCapture from 'expo-screen-capture';
@@ -22,7 +20,7 @@ import {Aud} from '@/components/Aud';
 import Alert, { AlertProps } from '@/components/Alert';
 import { useFileProgress } from '@/components/Prog';
 import { ChatBuble } from '@/components/ChatBuble';
-import { callProp, Routes } from './navType';
+import { callProp, Routes } from '@/constants/navType';
 import { cat, ChatMessage, echo, touch, watch } from '@/DB';
 export default function Chat() {
     const {t} = useTranslation();
@@ -45,14 +43,11 @@ export default function Chat() {
     const nav = useNavigation<callProp>();
     useEffect(() => {
         ScreenCapture.preventScreenCaptureAsync();
-        cat('chat',settingC.getNumber(uid)??0,uid,false).then(smgs)
+        // cat('chat',settingC.getNumber(uid)??0,uid,false).then(smgs)
         socket.on('block',async who=>{
             const [cont] = await cat('contact',who);
             salrt(p=>({...p,vis:true,title:t('you-block'),discription:t('you-block-from',{name:cont?.name ?? who}),button:[{txt:t('ok')}]}));
         })
-        if(settingC.getNumber(uid)){
-            settingC.set(uid,1);
-        }
         const lis = blocks.addOnValueChangedListener(k=>k==='by'&& sconvo(blocks.getString('by')?.includes(uid) ?? false))
         const sub = watch('chat',uid,smgs);
 
@@ -82,8 +77,7 @@ export default function Chat() {
     const sendMsg = async()=>{
         if(!txt.trim())return;
         const msg = {msg:txt.trim(),who:whoami,time:Date.now()};
-        flatlis.current?.scrollToEnd({animated:true});
-        touch('chat',{...msg,uid})
+        touch('chat',{...msg,uid}).then(()=>setTimeout(()=>flatlis.current?.scrollToEnd({animated:true}),100))
         socket.emit('chat',uid,msg);
         stxt('');
     }
@@ -228,10 +222,9 @@ export default function Chat() {
                     removeClippedSubviews={true}
                     onEndReachedThreshold={0.2}
                     onEndReached={()=>{}}
-                    onScrollToTop={ useCallback(async ()=>{
+                    onScrollToTop={ ()=>{
                         console.log('top')
-                    },[msgs])}
-                    onLayout={() => setTimeout(()=>flatlis.current?.scrollToEnd({ animated: false }),100)}
+                    }}
                 />
                 {fileMap[uid]?.prog &&(<>
                     <ThemedText type='mini'>{fileMap[uid]?.name}</ThemedText>
