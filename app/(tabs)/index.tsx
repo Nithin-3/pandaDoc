@@ -10,7 +10,7 @@ import  ManageExternalStorage  from 'react-native-external-storage-permission';
 import socket from '@/constants/Socket';
 import {useTranslation} from 'react-i18next';
 import { MaterialIcons, } from '@expo/vector-icons';
-import { allProp } from './navType';
+import { allProp } from '@/constants/navType';
 export default function HomeScreen() {
     const {t} = useTranslation();
     const nav = useNavigation<allProp>();

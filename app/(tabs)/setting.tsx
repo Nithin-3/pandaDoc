@@ -9,7 +9,7 @@ import { useNavigation } from 'expo-router';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import Drop from "@/components/Drop";
 import { settingC } from '@/constants/file';
-import { Routes } from './navType';
+import { Routes } from '@/constants/navType';
 export default function Setting() {
     const { t, i18n } = useTranslation();
     const nav = useNavigation();

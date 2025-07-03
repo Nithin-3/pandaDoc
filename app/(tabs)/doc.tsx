@@ -7,11 +7,11 @@ import { ScrollView, StyleSheet } from "react-native";
 import { TouchableOpacity } from "react-native";
 import { Ionicons, } from "@expo/vector-icons";
 import { useThemeColor } from "@/hooks/useThemeColor";
-type RouteParams = {uri:string}
+import {Routes} from '@/constants/navType'
 const DocViewer = () => {
     const nav = useNavigation();
     const borderColor=useThemeColor({light:undefined,dark:undefined},'text');
-    const { uri } = useRoute().params as RouteParams;
+    const { uri } = useRoute().params as Routes['doc'];
     const [dat,sdat] = useState('');
     useEffect(()=>{
         const path = uri.replace('file://','');

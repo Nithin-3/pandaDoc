@@ -19,7 +19,7 @@ import Cont from "@/components/Cont"
 import axios from "axios";
 import {useTranslation} from 'react-i18next';
 import {cat, ChatMessage, Contact, echo, rm, touch, watch} from '@/DB/index';
-import { chatProp } from './navType';
+import { chatProp } from '@/constants/navType';
 const List = () => {
     const {t} = useTranslation();
     const {fileMap,setFileStatus} = useFileProgress();
