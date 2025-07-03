@@ -6,12 +6,8 @@ import React, { useRef, useState } from 'react';
 import { Animated, PanResponder, StyleSheet, TouchableOpacity, Dimensions, Pressable, Modal, View } from 'react-native';
 import {useTranslation} from 'react-i18next'
 import { MaterialIcons } from "@expo/vector-icons";
+import { Contact } from "@/DB";
 
-interface Contact {
-    id: string;
-    name: string;
-    new?: number;
-}
 
 interface contProps {
     contact: Contact;
@@ -87,7 +83,7 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
                 }}>
                     <ThemedView style={[sty.contItm, { borderColor }]}>
                         <ThemedText style={[sty.contNam, { textDecorationLine: blocked ? 'underline line-through' : 'none' }]}>{contact.name} {contact.new && contact.new}{blockedBy && <MaterialIcons name="block" size={15} />}</ThemedText>
-                        <ThemedText style={sty.contId}>{contact.id}</ThemedText>
+                        <ThemedText style={sty.contId}>{contact.uid}</ThemedText>
                         {prog && (<>
                             <ThemedText type="mini">{pName}</ThemedText>
                             <ThemedView style={{ height: 3 }}>
@@ -111,7 +107,7 @@ const Cont: React.FC<contProps> = ({ contact, onDeletePress, onBlockPress, prog,
                     }} style={{ left: loc.left, top: loc.top, position:'absolute'} }>
                     <ThemedView style={[{borderColor},sty.pop]}>
                         <ThemedText style={{alignSelf:'center',textDecorationLine:'underline'}} type='subtitle'>{contact.name}</ThemedText>
-                        <TouchableOpacity onPress={() => { clipbord.setStringAsync(contact.id); sloc({ left: 0, top: 0 }); }} style={sty.popIn}>
+                        <TouchableOpacity onPress={() => { clipbord.setStringAsync(contact.uid); sloc({ left: 0, top: 0 }); }} style={sty.popIn}>
                             <ThemedText>{t('cp-uid')}</ThemedText>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => { onBlockPress?.(); sloc({ left: 0, top: 0 }); }} style={sty.popIn}>
@@ -143,7 +139,7 @@ const sty = StyleSheet.create({
 });
 
 export default React.memo(Cont, (prev, next) =>
-    prev.contact.id === next.contact.id &&
+    prev.contact.uid === next.contact.uid &&
     prev.contact.name === next.contact.name &&
     prev.contact.new === next.contact.new &&
     prev.prog === next.prog &&

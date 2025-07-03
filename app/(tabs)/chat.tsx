@@ -11,7 +11,7 @@ import {useRoute,useNavigation} from "@react-navigation/native"
 import AntDesign from '@expo/vector-icons/AntDesign';
 import {MaterialIcons} from '@expo/vector-icons/';
 import { TextInput } from 'react-native-gesture-handler';
-import {addChat,readChat,ChatMessage,splitSend, settingC, appPath, blocks, stor} from '@/constants/file';
+import {splitSend, settingC, appPath, blocks} from '@/constants/file';
 import axios from 'axios';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as DocumentPicker from 'expo-document-picker';
@@ -22,8 +22,8 @@ import {Aud} from '@/components/Aud';
 import Alert, { AlertProps } from '@/components/Alert';
 import { useFileProgress } from '@/components/Prog';
 import { ChatBuble } from '@/components/ChatBuble';
-import { ContactDB } from '@/constants/db';
 import { callProp, Routes } from './navType';
+import { cat, ChatMessage, echo, touch, watch } from '@/DB';
 export default function Chat() {
     const {t} = useTranslation();
     const { uid, nam, block,blockby} = useRoute().params as Routes['chat'];
@@ -45,28 +45,27 @@ export default function Chat() {
     const nav = useNavigation<callProp>();
     useEffect(() => {
         ScreenCapture.preventScreenCaptureAsync();
-        smgs(readChat(uid))
+        cat('chat',settingC.getNumber(uid)??0,uid,false).then(smgs)
         socket.on('block',async who=>{
-            const cont = await ContactDB.get(who);
+            const [cont] = await cat('contact',who);
             salrt(p=>({...p,vis:true,title:t('you-block'),discription:t('you-block-from',{name:cont?.name ?? who}),button:[{txt:t('ok')}]}));
         })
         if(settingC.getNumber(uid)){
             settingC.set(uid,1);
         }
-        ContactDB.edit(uid,{new:null})
         const lis = blocks.addOnValueChangedListener(k=>k==='by'&& sconvo(blocks.getString('by')?.includes(uid) ?? false))
-        const chtLis = stor.addOnValueChangedListener(()=>smgs(readChat(uid)))
+        const sub = watch('chat',uid,smgs);
 
         return () =>{ 
             lis.remove();
-            chtLis.remove();
+            sub.unsubscribe()
+            echo('contact',uid,{new:undefined})
             ScreenCapture.allowScreenCaptureAsync();
         }
     }, []);
     useEffect(()=>{
-        if(msgs.length % 50 == 0 && msgs[50 * msgs.length / 50 - 50].time! > (settingC.getNumber(uid)??0)){
-            
-            settingC.set(uid,msgs[-1].time!)
+        if(msgs.length >= 50){
+            settingC.set(uid,msgs[msgs.length%50].time!)
         }
     },[msgs])
     const rqCall = async(vid:boolean=false)=>{
@@ -84,15 +83,15 @@ export default function Chat() {
         if(!txt.trim())return;
         const msg = {msg:txt.trim(),who:whoami,time:Date.now()};
         flatlis.current?.scrollToEnd({animated:true});
+        touch('chat',{...msg,uid})
         socket.emit('chat',uid,msg);
-        addChat(uid,{...msg,uid})
         stxt('');
     }
     const changeNam = async ()=>{
         sedit((prevEdit) => {
             if (prevEdit) {
                 if(titNam.trim()){
-                    ContactDB.edit(uid,{name:titNam.trim()})
+                    echo('contact',uid,{name:titNam.trim()});
                 }else{
                     return prevEdit;
                 }
@@ -132,8 +131,7 @@ export default function Chat() {
     const cpUri = async(uri:string,filename:string)=>{
         const path = `${await appPath()}${filename}`
         await RNFS.copyFile(uri,path);
-        addChat(uid,{uri:`file://${path}`,who:whoami,time:Date.now(), uid});
-        smgs(readChat(uid))
+        touch('chat',{uri:`file://${path}`,who:whoami,time:Date.now(), uid})
     }
     const sendFls = async () => {
         if (!file.length) return;

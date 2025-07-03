@@ -3,11 +3,11 @@ import {field,text} from '@nozbe/watermelondb/decorators';
 export default class Contact extends Model{
     static table = 'contact';
     // @ts-ignore
-    @text('name') name
+    @text('name') name!:string;
     // @ts-ignore
-    @text('uid') uid
+    @text('uid') uid!:string;
     // @ts-ignore
-    @field('new') new
+    @field('new') new?:number;
     // @ts-ignore
-    @field('at') at
+    @field('at') at!:number;
 }

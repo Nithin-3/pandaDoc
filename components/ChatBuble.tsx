@@ -1,4 +1,3 @@
-import { ChatMessage } from '@/constants/file'
 import React from 'react';
 import { Dimensions, Image, Pressable, StyleSheet } from 'react-native'
 import { ThemedView } from './ThemedView';
@@ -7,6 +6,7 @@ import * as clip from 'expo-clipboard';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Vid } from './Vid';
 import { Aud } from './Aud';
+import { ChatMessage } from '@/DB';
 
 
 interface ChatBubleProps{

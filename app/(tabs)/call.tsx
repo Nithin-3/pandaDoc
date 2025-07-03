@@ -8,13 +8,13 @@ import {useThemeColor} from "@/hooks/useThemeColor"
 import {useRoute,useNavigation} from "@react-navigation/native"
 import { peer } from '@/constants/webrtc';
 import socket from '@/constants/Socket';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Routes } from './navType';
+import { settingC } from '@/constants/file';
 export default function Call(){
     const { uid, nam , cal } = useRoute().params as Routes['call'];
     const [remAud,sremAud] = useState(true);
     const [locAud,slocAud] = useState(true);
-    const [yar,syar] = useState('');
+    const whoami = settingC.getString('uid') ?? '';
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
     const [call,scall] = useState<'IN'|'ON'|'DIA'>(cal);
@@ -30,7 +30,6 @@ export default function Call(){
     },[call])
     useEffect(() => {
         let active = true;
-        AsyncStorage.getItem("uid").then(e => e ?? '').then(syar);
         (async () => {
             if (active) {
                 setLocalStream(peer!.getLocStrm());
@@ -74,7 +73,7 @@ export default function Call(){
     const stCall = async ()=>{
         try{
             const off = await peer!.crOff(uid);
-            socket.emit('offer',uid, yar,off);
+            socket.emit('offer',uid, whoami,off);
         }catch(e:any){
             if('Peer init failed'==e.message){
                 peer!.initPeer(uid).then(stCall)
