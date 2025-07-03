@@ -13,37 +13,14 @@ interface FileInfo {
     name: string;
 }
 type SendChunk = (data: string) => void;
-export const stor = new MMKV({id:'cht'});
 export const blocks = new MMKV({id:'block'});
 export const settingC = new MMKV({id:'sett'});
 export type writeFunction = (chunk:string) => Promise<string|number>;
-export type ChatMessage = {
-    msg?: string;
-    uri?:string;
-    uid:string;
-    time:number|undefined;
-    who: string;
-};
 export const appPath = async():Promise<string>=>{
         let path = `${RNFS.DownloadDirectoryPath}/.pandaDoc/`;
         const exists = await RNFS.exists(path);
         if (!exists) await RNFS.mkdir(path);
         return path;
-}
-export const addChat = (uid:string,msg:ChatMessage|null):boolean=>{
-    const exs = stor.getString(uid);
-    if(exs){
-        const past = exs.slice(1,-1)
-        stor.set(uid,`[${past.length?past+',':''}${JSON.stringify(msg)}]`);
-        return false;
-    }
-    stor.set(uid,msg!=null?JSON.stringify([msg]):`[]`);
-    return true;
-};
-export const readChat = (uid:string):ChatMessage[]=>JSON.parse(stor.getString(uid) ?? '[]') as ChatMessage[]
-export const rmChat = (uid:string):void=>{
-    readChat(uid).map(async msg=>msg.uri&&await RNFS.unlink(msg.uri.replace('file://', '')).catch(_e=>{}))
-    stor.delete(uid)
 }
 export const splitSend = async (file: FileInfo, send: SendChunk): Promise<boolean> => {
     const { uri, name,} = file;
