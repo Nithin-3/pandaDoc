@@ -1,3 +1,4 @@
+import { ChatMessage, touch } from '@/DB';
 import RNFS from 'react-native-fs'
 import {MMKV} from 'react-native-mmkv'
 const enc = new TextEncoder();
@@ -15,7 +16,29 @@ interface FileInfo {
 type SendChunk = (data: string) => void;
 export const blocks = new MMKV({id:'block'});
 export const settingC = new MMKV({id:'sett'});
+export const chats = new MMKV({id:'chat'});
 export type writeFunction = (chunk:string) => Promise<string|number>;
+export const addChat = (message:ChatMessage):boolean=>{
+    const msg = JSON.parse(chats.getString(message.uid)??'[]') as ChatMessage[];
+    if (message.uri) {
+        const uri = JSON.parse(chats.getString(`uri_${message.uid}`)??'[]') as string[];
+        uri.push(message.uri);
+        chats.set(`uri_${message.uid}`,JSON.stringify(uri))
+    }
+    msg.push(message);
+    if (msg.length > 50) {
+        touch('chat',msg.shift()!)
+    }
+    chats.set(message.uid,JSON.stringify(msg));
+    return msg.length < 2;
+
+}
+export const rmChat = (uid:string)=>{
+    const uri = JSON.parse(chats.getString(`uri_${uid}`)??'[]') as string[];
+    uri.map(async v=>await RNFS.unlink(v.replace('file://','')))
+    chats.delete(uid)
+    chats.delete(`uri_${uid}`)
+}
 export const appPath = async():Promise<string>=>{
         let path = `${RNFS.DownloadDirectoryPath}/.pandaDoc/`;
         const exists = await RNFS.exists(path);

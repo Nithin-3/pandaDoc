@@ -4,7 +4,8 @@ import {schema} from './schema';
 import Chat from './chat';
 import Contacts from './contact';
 import { Subscription } from 'rxjs';
-import { settingC } from '@/constants/file';
+import {MMKV} from 'react-native-mmkv'
+const settingC = new MMKV({id:'sett'});
 const adapter = new SqAdapt({schema});
 const database = new Database({adapter,modelClasses:[Chat,Contacts]})
 
@@ -124,9 +125,11 @@ export function rm(table:'chat', foreignKey:number|string):Promise<void>;
 export function rm(table:'contact', foreignKey:string):Promise<void>;
 export async function rm(table:'chat'|'contact', foreignKey:number|string):Promise<void>{
     const collection = database.get(table);
-    const [rec] = await collection.query(Q.where( 'number' == typeof foreignKey ? 'time' : 'uid', foreignKey )).fetch()
-    if(!rec) return;
+    const rec = await collection.query(Q.where( 'number' == typeof foreignKey ? 'time' : 'uid', foreignKey )).fetch()
+    if(!rec.length) return;
     await database.write(async ()=>{
-        await rec.destroyPermanently();
+        rec.forEach(async(mod)=>{
+            await mod.destroyPermanently();
+        })
     })
 }

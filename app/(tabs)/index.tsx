@@ -70,7 +70,7 @@ export default function HomeScreen() {
 
     }
     const list = ({item}: { item: { path: string; name: string } })=>(
-        <TouchableOpacity style={[styles.lisTxt,{borderColor}]} onPress={() =>{cht? nav.navigate('list' as never):openFile(item.path)}} onLongPress={()=>{sCht(p=>!p)}}>
+        <TouchableOpacity style={[styles.lisTxt,{borderColor}]} onPress={() =>{cht? nav.navigate('list'):openFile(item.path)}} onLongPress={()=>{sCht(p=>!p)}}>
             <ThemedText>{item.name}</ThemedText>
         </TouchableOpacity>
     )
