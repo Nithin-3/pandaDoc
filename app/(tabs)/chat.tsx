@@ -1,6 +1,6 @@
 import '@/lang/i18n';
 import { FlatList, StyleSheet, TouchableOpacity,Keyboard,TouchableWithoutFeedback,Modal, Image, Dimensions, TextInput,} from 'react-native'
-import { useEffect,useState,useRef, useCallback, } from "react";
+import { useEffect,useState,useRef, } from "react";
 import RNFS from 'react-native-fs';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedInput } from '@/components/ThemedInput';
@@ -9,7 +9,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import socket from '@/constants/Socket';
 import {useRoute,useNavigation} from "@react-navigation/native"
 import {MaterialIcons,AntDesign} from '@expo/vector-icons/';
-import {splitSend, settingC, appPath, blocks} from '@/constants/file';
+import {splitSend, settingC, appPath, blocks, chats, addChat} from '@/constants/file';
 import axios from 'axios';
 import * as ScreenCapture from 'expo-screen-capture';
 import * as DocumentPicker from 'expo-document-picker';
@@ -21,7 +21,7 @@ import Alert, { AlertProps } from '@/components/Alert';
 import { useFileProgress } from '@/components/Prog';
 import { ChatBuble } from '@/components/ChatBuble';
 import { callProp, Routes } from '@/constants/navType';
-import { cat, ChatMessage, echo, touch, watch } from '@/DB';
+import { cat, ChatMessage, echo,} from '@/DB';
 export default function Chat() {
     const {t} = useTranslation();
     const { uid, nam, block,blockby} = useRoute().params as Routes['chat'];
@@ -32,7 +32,7 @@ export default function Chat() {
     const [convo,sconvo] = useState(blockby);
     const [txt,stxt] = useState('');
     const [titNam,stitNam] = useState(nam);
-    const [msgs,smgs] = useState<ChatMessage[]>([]);
+    const [msgs,smgs] = useState<ChatMessage[]>(JSON.parse( chats.getString(uid) ?? '[]' ));
     const [edit,sedit] = useState(false);
     const [fileSta,sfileSta] = useState<'NA'|'PRE'|'ON'>('NA');
     const [file,sfile] = useState<DocumentPicker.DocumentPickerAsset[]>([])
@@ -43,17 +43,16 @@ export default function Chat() {
     const nav = useNavigation<callProp>();
     useEffect(() => {
         ScreenCapture.preventScreenCaptureAsync();
-        // cat('chat',settingC.getNumber(uid)??0,uid,false).then(smgs)
         socket.on('block',async who=>{
             const [cont] = await cat('contact',who);
             salrt(p=>({...p,vis:true,title:t('you-block'),discription:t('you-block-from',{name:cont?.name ?? who}),button:[{txt:t('ok')}]}));
         })
         const lis = blocks.addOnValueChangedListener(k=>k==='by'&& sconvo(blocks.getString('by')?.includes(uid) ?? false))
-        const sub = watch('chat',uid,smgs);
+        const change = chats.addOnValueChangedListener(k=>k===uid && smgs( JSON.parse( chats.getString(k) ?? '[]' ) ))
 
         return () =>{ 
             lis.remove();
-            sub.unsubscribe()
+            change.remove()
             echo('contact',uid,{new:undefined})
             ScreenCapture.allowScreenCaptureAsync();
         }
@@ -70,14 +69,15 @@ export default function Chat() {
             await peer!.stStrm(vid,uid);
             nav.navigate('call', { uid, nam, cal: 'ON' });
         }else{
-            salrt(p=>({...p,title:`${nam}${t('is-of')}`,vis:true,button:[{txt:t('call-late')}]}))
+            salrt(p=>({...p,title:`${nam} ${t('is-of')}`,discription:t('call-late'),vis:true,button:[{txt:t('ok')}]}))
         }
     }
 
     const sendMsg = async()=>{
         if(!txt.trim())return;
         const msg = {msg:txt.trim(),who:whoami,time:Date.now()};
-        touch('chat',{...msg,uid}).then(()=>setTimeout(()=>flatlis.current?.scrollToEnd({animated:true}),100))
+        addChat({...msg,uid})
+        setTimeout(()=>flatlis.current?.scrollToEnd({animated:true}),100)
         socket.emit('chat',uid,msg);
         stxt('');
     }
@@ -87,7 +87,7 @@ export default function Chat() {
                 if(titNam.trim()){
                     echo('contact',uid,{name:titNam.trim()});
                 }else{
-                    return prevEdit;
+                    stitNam(nam);
                 }
             } else {
                 setTimeout(()=>title.current?.focus(),100)
@@ -125,7 +125,7 @@ export default function Chat() {
     const cpUri = async(uri:string,filename:string)=>{
         const path = `${await appPath()}${filename}`
         await RNFS.copyFile(uri,path);
-        touch('chat',{uri:`file://${path}`,who:whoami,time:Date.now(), uid})
+        addChat({uri:`file://${path}`,who:whoami,time:Date.now(), uid})
     }
     const sendFls = async () => {
         if (!file.length) return;
@@ -225,6 +225,7 @@ export default function Chat() {
                     onScrollToTop={ ()=>{
                         console.log('top')
                     }}
+                    onLayout={()=>setTimeout(()=>flatlis.current?.scrollToEnd({animated:null}),100)}
                 />
                 {fileMap[uid]?.prog &&(<>
                     <ThemedText type='mini'>{fileMap[uid]?.name}</ThemedText>

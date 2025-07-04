@@ -10,7 +10,7 @@ import {Ionicons} from "@expo/vector-icons";
 import * as clipbord from "expo-clipboard";
 import {useNavigation} from '@react-navigation/native';
 import socket from '@/constants/Socket';
-import {addChunk,writeFunction,blocks, settingC, appPath} from '@/constants/file';
+import {addChunk,writeFunction,blocks, settingC, appPath, addChat, rmChat} from '@/constants/file';
 import {P2P} from '@/constants/webrtc';
 import RNFS from 'react-native-fs';
 import * as ScreenCapture from 'expo-screen-capture';
@@ -37,6 +37,7 @@ const List = () => {
     const nav = useNavigation<chatProp>();
     const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     useLayoutEffect(()=>{
+        socket.emit('set',whoami)
         return nav.addListener('focus', () => {
             loadContacts();
             ScreenCapture.preventScreenCaptureAsync();
@@ -46,7 +47,6 @@ const List = () => {
         blocks.set('which',JSON.stringify(blockC))
     }, [blockC])
     useEffect(() => {
-        socket.emit('set',whoami)
         const showSubscription = Keyboard.addListener('keyboardDidShow', () => {setIsKeyboardVisible(true);});
         const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {setIsKeyboardVisible(false);});
         peer.current = new P2P({
@@ -56,9 +56,7 @@ const List = () => {
             onData:(data,peerId)=>{
                 dow.get(peerId)?.(data).then(async res=>{
                     if(typeof res == 'string'){
-                        const  is =  await cat('chat',0,peerId,false);
-                        touch('chat',{uri:`file://${res}`,who:peerId,time:Date.now(),uid:peerId})
-                        if(!is.length){
+                        if(addChat({uri:`file://${res}`,who:peerId,time:Date.now(),uid:peerId})){
                             touch('contact',{name:t('unknown'),uid:peerId,at:Date.now()})
                         }else{
                             const [cont] = await cat('contact',peerId)
@@ -120,9 +118,7 @@ const List = () => {
                         },progressDivider:5})
                     const res = await dow.promise;
                     if(res.statusCode === 200){
-                        const  is =  await cat('chat',0,yar[0],false);
-                        touch('chat',{uri:`file://${path}`,who:yar[0],time:Date.now(),uid:yar[0]})
-                        if(!is.length){
+                        if(addChat({uri:`file://${path}`,who:yar[0],time:Date.now(),uid:yar[0]})){
                             await touch('contact',{uid:yar[0],name:t('unknown'),at:Date.now()})
                         }else{
                             const [cont] = await cat('contact',yar[0])
@@ -149,9 +145,9 @@ const List = () => {
                 console.log('block');
                 socket.emit('block',msg.who,whoami);
             }else{
-                touch('chat',{...msg,uid:msg.who})
+                addChat({...msg,uid:msg.who})
                 const contact = await cat('contact',msg.who)
-                contact.length ? echo('contact',msg.who,{new:contact[0].new?contact[0].new+1:0}) : touch('contact',{uid:msg.who,name:t('unknown'),at:Date.now()})
+                contact.length ? echo('contact',msg.who,{new:contact[0].new?contact[0].new+1:1}) : touch('contact',{uid:msg.who,name:t('unknown'),at:Date.now()})
             }
         });
         socket.on('block', who => {
@@ -193,7 +189,11 @@ const List = () => {
             salrt(p=>({...p,vis:true,title:t('uid-exist',{name:contact[0].name}),discription:t('re-write-contact'),button:[
                 {
                     txt:t('ok'),
-                    onPress:() => echo('contact',uid,{name:name.trim()})
+                    onPress:() =>{
+                        echo('contact',uid,{name:name.trim()}).then(()=>{
+                            cat('contact').then(setContacts)
+                        })
+                    }
                 },{
                     txt:t('cancel')
                 }
@@ -207,6 +207,7 @@ const List = () => {
     const deleteContact = (contactId:string) => {
         rm('contact',contactId);
         rm('chat',contactId);
+        rmChat(contactId);
     };
     const blockContact = (contactId:string)=>{
         sblockC(p=>{
