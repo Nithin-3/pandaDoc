@@ -40,6 +40,7 @@ export default function Chat() {
     const [alrt,salrt] = useState<AlertProps>({vis:false,setVis:()=>{salrt(p=>({...p, vis:false,title:'',discription:'',button:[]}))},title:'',discription:'',button:[]});
     const flatlis = useRef<FlatList>(null);
     const title = useRef<TextInput | null>(null);
+    const scroll = useRef(true);
     const nav = useNavigation<callProp>();
     useEffect(() => {
         ScreenCapture.preventScreenCaptureAsync();
@@ -160,6 +161,9 @@ export default function Chat() {
                     discription:t('s2ser',{name:nam}),
                     button:[
                         {
+                            txt:t('cancel')
+                        },
+                        {
                             txt:t('send'),
                             onPress:()=>{
                                 const data = new FormData();
@@ -182,8 +186,6 @@ export default function Chat() {
                                         salrt(p=>({...p,vis:true,title:'Sorry...',discription:`${e.response?.status || e.message} occer`,button:[{txt:t('ok')}]}))
                                     })
                             }
-                        },{
-                            txt:t('cancel')
                         }
                     ]
                 }))
@@ -193,6 +195,11 @@ export default function Chat() {
             })
     }
     const rendMsg = ({item}:{item:ChatMessage})=><ChatBuble item={item} yar={whoami} path={`file://${RNFS.DownloadDirectoryPath}`} />;
+    const pastMsg = async ()=>{
+        scroll.current = false;
+        const past = await cat('chat',msgs[0].time,uid)
+        smgs(p=>[ ...past,...p])
+    }
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <ThemedView style={style.chat} >
@@ -204,10 +211,10 @@ export default function Chat() {
                     <TouchableOpacity onPress={changeNam} style={{flex:0.1,marginHorizontal:3}}>
                         <AntDesign name={edit?"check":"edit"} size={28} color={borderColor} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={{flex:0.1,marginHorizontal:3}} onPress={()=>rqCall(true)}>
+                    <TouchableOpacity style={{flex:0.1,marginHorizontal:3}} onPress={()=>!(convo || block) && rqCall(true)}>
                         <AntDesign name="videocamera" size={24} color={borderColor} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={{flex:0.1,marginHorizontal:3}} onPress={()=>rqCall(false)}>
+                    <TouchableOpacity style={{flex:0.1,marginHorizontal:3}} onPress={()=>!(convo || block) && rqCall(false)}>
                         <AntDesign name="phone" size={24} color={borderColor} />
                     </TouchableOpacity>
                 </ThemedView>
@@ -220,11 +227,9 @@ export default function Chat() {
                     maxToRenderPerBatch={20}
                     windowSize={10}
                     removeClippedSubviews={true}
-                    onEndReachedThreshold={0.2}
-                    onEndReached={()=>{}}
-                    onScrollToTop={ ()=>{
-                        console.log('top')
-                    }}
+                    onScroll={e=>{ if( scroll.current && 0 >= e.nativeEvent.contentOffset.y){
+                        pastMsg().finally(()=>scroll.current = true )
+                    }}}
                     onLayout={()=>setTimeout(()=>flatlis.current?.scrollToEnd({animated:null}),100)}
                 />
                 {fileMap[uid]?.prog &&(<>
