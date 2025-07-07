@@ -18,8 +18,12 @@ export default function Setting() {
 
     const langs = [
         { label: 'English', value: 'en' },
-        { label: 'தமிழ்', value: 'ta' },
+        { label: 'Français', value: 'fr' },
+        { label: '日本語', value: 'ja' },
         { label: 'മലയാളം', value: 'ml' },
+        { label: 'ಕನ್ನಡ', value: 'kn' },
+        { label: 'తెలుగు', value: 'te' },
+        { label: 'தமிழ்', value: 'ta' },
     ];
     return (
         <ThemedView>
