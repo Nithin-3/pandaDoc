@@ -45,7 +45,7 @@ When you long-press a document and select "Go to Chat", you access a hidden chat
 
 1. Open PandaDoc; your documents are listed by default.
 2. Tap to open and read any document.
-3. Long-press a document and select "Go to Chat" to access the hidden chat contact list.
+3. Long-press any document then click any document to access the hidden chat contact list.
 4. Long-press your UID to copy it for sharing with others.
 5. Add new contacts using other users' UIDs to initiate anonymous chats and file sharing.
 
