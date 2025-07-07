@@ -20,9 +20,9 @@ export default function Setting() {
         { label: 'English', value: 'en' },
         { label: 'Français', value: 'fr' },
         { label: '日本語', value: 'ja' },
-        { label: 'മലയാളം', value: 'ml' },
         { label: 'ಕನ್ನಡ', value: 'kn' },
         { label: 'తెలుగు', value: 'te' },
+        { label: 'മലയാളം', value: 'ml' },
         { label: 'தமிழ்', value: 'ta' },
     ];
     return (
