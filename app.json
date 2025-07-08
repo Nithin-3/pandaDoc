@@ -13,7 +13,7 @@
       "bundleIdentifier": "com.ninja.pandaDoc"
     },
     "android": {
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE",
@@ -64,9 +64,6 @@
     "extra": {
       "router": {
         "origin": false
-      },
-      "eas": {
-        "projectId": "9f45d416-3071-4946-968d-6a5fda024039"
       }
     }
   }
