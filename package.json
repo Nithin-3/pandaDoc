@@ -88,7 +88,8 @@
           "react-native-fs",
           "react-native-webrtc",
           "react-native-external-storage-permission",
-          "socket.io-client"
+          "socket.io-client",
+                    "@nozbe/watermelondb"
         ],
         "listUnknownPackages": false
       }
