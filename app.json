@@ -1,73 +1,81 @@
 {
-  "expo": {
-    "name": "pandaDoc",
-    "slug": "nit-ninja",
-    "version": "2.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.ninja.pandaDoc"
-    },
-    "android": {
-      "versionCode": 5,
-            "targetSdkVersion": 35,
-      "permissions": [
-        "INTERNET",
-        "ACCESS_NETWORK_STATE",
-        "CAMERA",
-        "RECORD_AUDIO",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "VIBRATE",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.DOWNLOAD_WITHOUT_NOTIFICATION",
-        "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
-      ],
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#000000"
-      },
-      "package": "com.ninja.pandaDoc"
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      "expo-sqlite",
-      "@config-plugins/react-native-pdf",
-      "expo-router",
-      "expo-video",
-      "expo-audio",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#000000"
+    "expo": {
+        "name": "pandaDoc",
+        "slug": "nit-ninja",
+        "version": "2.0.0",
+        "orientation": "portrait",
+        "icon": "./assets/images/icon.png",
+        "scheme": "myapp",
+        "userInterfaceStyle": "automatic",
+        "newArchEnabled": true,
+        "ios": {
+            "supportsTablet": true,
+            "bundleIdentifier": "com.ninja.pandaDoc"
+        },
+        "android": {
+            "versionCode": 7,
+            "permissions": [
+                "INTERNET",
+                "ACCESS_NETWORK_STATE",
+                "CAMERA",
+                "RECORD_AUDIO",
+                "READ_EXTERNAL_STORAGE",
+                "WRITE_EXTERNAL_STORAGE",
+                "VIBRATE",
+                "android.permission.READ_EXTERNAL_STORAGE",
+                "android.permission.WRITE_EXTERNAL_STORAGE",
+                "android.permission.DOWNLOAD_WITHOUT_NOTIFICATION",
+                "android.permission.ACCESS_NETWORK_STATE",
+                "android.permission.RECORD_AUDIO",
+                "android.permission.MODIFY_AUDIO_SETTINGS"
+            ],
+            "adaptiveIcon": {
+                "foregroundImage": "./assets/images/adaptive-icon.png",
+                "backgroundColor": "#000000"
+            },
+            "package": "com.ninja.pandaDoc"
+        },
+        "web": {
+            "bundler": "metro",
+            "output": "static",
+            "favicon": "./assets/images/favicon.png"
+        },
+        "plugins": [
+            "expo-sqlite",
+            "@config-plugins/react-native-pdf",
+            "expo-router",
+            "expo-video",
+            "expo-audio",
+            [
+                "expo-splash-screen",
+                {
+                    "image": "./assets/images/splash-icon.png",
+                    "imageWidth": 200,
+                    "resizeMode": "contain",
+                    "backgroundColor": "#000000"
+                }
+            ],
+            [
+                "expo-build-properties",
+                {
+                    "android": {
+                        "compileSdkVersion": 35,
+                        "targetSdkVersion": 35,
+                        "buildToolsVersion": "35.0.0"
+                    }
+                }
+            ]
+        ],
+        "experiments": {
+            "typedRoutes": true
+        },
+        "extra": {
+            "router": {
+                "origin": false
+            },
+            "eas": {
+                "projectId": "da687534-6b56-4bce-935b-02d2e854f985"
+            }
         }
-      ],
-      "expo-sqlite"
-    ],
-    "experiments": {
-      "typedRoutes": true
-    },
-    "extra": {
-      "router": {
-        "origin": false
-      },
-      "eas": {
-        "projectId": "da687534-6b56-4bce-935b-02d2e854f985"
-      }
     }
-  }
 }
