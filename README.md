@@ -4,7 +4,7 @@
 
 PandaDoc is a privacy-first, anonymous chat application built with Expo (React Native) for Android. The app is cleverly disguised as a document reader and lists documents (PDF, TXT, XML, CSV, JSON, HTML, MD, LOG) available on your device. 
 
-When you long-press a document and select "Go to Chat", you access a hidden chat interface, allowing you to communicate anonymously with other users. Each user is assigned a unique ID (UID); no personal data is collected or stored.
+You access a hidden chat interface, allowing you to communicate anonymously with other users. Each user is assigned a unique ID (UID); no personal data is collected or stored.
 
 ## Features
 
