@@ -6,16 +6,10 @@
     "build": {
         "development": {
             "developmentClient": true,
-            "distribution": "internal",
-            "android": {
-                "image": "android-33"
-            }
+            "distribution": "internal"
         },
         "preview": {
-            "distribution": "internal",
-            "android": {
-                "image": "android-33"
-            }
+            "distribution": "internal"
         },
         "production": {
             "autoIncrement": false,

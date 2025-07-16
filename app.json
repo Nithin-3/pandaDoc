@@ -64,7 +64,7 @@
                         "buildToolsVersion": "35.0.0"
                     }
                 }
-            ]
+            ],
         ],
         "experiments": {
             "typedRoutes": true
@@ -74,7 +74,7 @@
                 "origin": false
             },
             "eas": {
-                "projectId": "da687534-6b56-4bce-935b-02d2e854f985"
+                "projectId": "8520ccd4-c1f9-40c1-9ef4-39cb21ea563c"
             }
         }
     }
