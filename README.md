@@ -1,5 +1,7 @@
 # PandaDoc
 
+[![Watch the screen recording](https://img.youtube.com/vi/VIDEO_ID/default.jpg)](https://nithin-3.github.io/portfo/galven/pandaDoc.mp4)
+
 ## Description
 
 PandaDoc is a privacy-first, anonymous chat application built with Expo (React Native) for Android. The app is cleverly disguised as a document reader and lists documents (PDF, TXT, XML, CSV, JSON, HTML, MD, LOG) available on your device. 
